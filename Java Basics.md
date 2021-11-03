@@ -1233,23 +1233,300 @@ class cl = new class(String);
 
 
 
+### common & useful annotation
+
+#### bean declaration annotation
+
+1. @Component：泛指各类组件，当这个组件不属于@Services、@Controller的时候，就可以使用@Component，把普通的pojo实例化到Spring IoC容器中。
+
+2. @Controller：在展现层使用，控制器的声明，用于标记在一个类上，使用它标记的类就是一个SpringMVC的Controller对象，分发处理器会扫描使用该注解的类的方法，并检测该方法是否使用了@RequestMapping注解。@Controller只是定义了一个控制器类，而使用@RequestMapping注解的方法才是处理请求的处理器。
+
+3. @Service：在业务逻辑层使用（service层注入dao）用于标注服务层，主要用于进行业务逻辑。
+
+4. @Repository：用于标注数据库访问层，也可以说被作为持久层操作（数据库）的bean来使用，即dao层。
+
+   @Repository(value="userDao")让Spring创建名字叫”userDao“的一个userDaoImpl实例。
+
+   ```java
+   //也可以使用@Component，效果都是一样的，只是为了声明为bean
+   @Repository
+   @Mapper // 作用和@Repository是一样的
+   public interface UserDao {
+     
+     @Insert("insert into user(account, password, user_name) " +
+               "values(#{user.account}, #{user.password}, #{user.name})")
+       int insertUser(@Param("user") User user) throws RuntimeException;
+   }
+   
+   作者：江夏
+   链接：https://zhuanlan.zhihu.com/p/148537889
+   来源：知乎
+   著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+   ```
 
 
 
+#### bean injection annotation
+
+1. @Autowired：对类的成员变量、方法、构造方法、进行标注，完成自动装配的工作，通过Autowired来消除set和get方法。
+
+   值得一提的是，Autowired翻译成自动装配比较合适，通过自动装配从IoC容器中查找到并返回给该属性。
+   
+   ```java
+   @Repository("userRepository")
+   public class UserRepositoryImps implements UserRepository{
+   
+       @Override
+       public void save() {
+           System.out.println("UserRepositoryImps save");
+       }
+   }    
+   
+   @Service
+   public class UserService {
+       @Autowired
+       private UserRepository userRepository;
+   
+       public void save(){
+           userRepository.save();
+       }
+   }
+   
+   作者：江夏
+   链接：https://zhuanlan.zhihu.com/p/148537889
+   来源：知乎
+   著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+   ```
+   
+2. @Inject：Inject可以作用在变量、setter、构造方法上，根据类型自动装配，如果需要根据名称自动装配，使用@Named。
+
+   @Inject主要使用在变量、setter方法、构造方法上，使用方法与@Autowired一样。
+
+   ```java 
+   public class User {
+       private Person person;
+   
+       @Inject
+       public void setPerson(@Named("main") Person person) {
+           this.person = person;
+       }
+   }
+   ```
+
+   @Autowired、@Inject和@Resource都可以注解在set方法和属性上，推荐注解在属性上。
+
+3. @Resource：@Resource是根据名称进行自动装配的，一般会指定一个name属性。
+
+   ```java
+   public class User {
+       private Person person;
+   
+       @Resource(name="myPerson")
+       public void setPerson(Person person) {
+           this.person = person;
+       }
+   }
+   ```
 
 
 
+#### configuration annotation
+
+1. @Bean：Spring的@Bean注解用于告诉方法，产生一个Bean对象，然后将这个对象交给Spring容器管理。产生这个Bean对象的方法Spring只会调用一次，随后这个Spring将会将这个Bean对象放在自己的IOC容器中。SpringIOC 容器管理一个或者多个bean，这些bean都需要在@Configuration注解下进行创建，在一个方法上使用@Bean注解就表明这个方法需要交给Spring进行管理。
+
+   ```java
+   @Configuration
+   public class AppConfig {
+       // 未指定bean 的名称，默认采用的是 "方法名" + "首字母小写"的配置方式
+       @Bean
+       public MyBean myBean(){
+           return new MyBean();
+       }
+   }
+   
+   public class MyBean {
+   
+       public MyBean(){
+           System.out.println("MyBean Initializing");
+       }
+   }
+   ```
+
+   @Bean的参数有：value、name、autowired、initMethod、destroyMethod。
+   
+   value和name的名称是相同的，如果没有自定义name和value，那么就使用方法的名称作为该bean的名称。
+   
+   autowire指定 bean 的装配方式， 根据名称 和 根据类型 装配， 一般不设置，采用默认即可。autowire指定的装配方式 有三种Autowire.NO (默认设置)、Autowire.BY_NAME、Autowire.BY_TYPE。
+   
+   initMethod和destroyMethod指定bean的初始化方法和销毁方法， 直接指定方法名称即可，不用带括号。
+   
+   ```java
+   public class MyBean {
+   
+       public MyBean(){
+           System.out.println("MyBean Initializing");
+       }
+   
+       public void init(){
+           System.out.println("Bean 初始化方法被调用");
+       }
+   
+       public void destroy(){
+           System.out.println("Bean 销毁方法被调用");
+       }
+   }
+   
+   @Configuration
+   public class AppConfig {
+   //  @Bean
+       @Bean(initMethod = "init", destroyMethod = "destroy")
+       public MyBean myBean(){
+           return new MyBean();
+       }
+   }
+   ```
+   
+   ：@Scope 设置Spring容器如何新建Bean实例，默认是@scope("Singleton ")，即单例模式。其设置类型包括：
+   
+   Singleton （单例,一个Spring容器中只有一个bean实例，默认模式）,
+   Protetype （每次调用新建一个bean）,
+   Request （web项目中，给每个http request新建一个bean）,
+   Session （web项目中，给每个http session新建一个bean）,
+   GlobalSession（给每一个 global http session新建一个Bean实例）
+
+2. @ComponentScan：ComponentScan主要就是定义扫描的路径从中找出标识了需要装配的类自动装配到spring的bean容器中。前面说到过@Controller注解，@Service，@Repository注解，它们其实都是组件，属于@Component注解，而@ComponentScan注解默认就会装配标识了@Controller，@Service，@Repository，@Component注解的类到spring容器中。
+
+   @WishlyConfiguration 为@Configuration与@ComponentScan的组合注解，可以替代这两个注解。
 
 
 
+#### value annotation
+
+1. @Value：@Value的作用是是通过注释将常量、配置文件中的数值，作为变量的初始值。
+
+   1. 普通注入
+
+      ```java 
+      @Value("张三")
+      private String name; // 注入普通字符串
+      ```
+
+   2. 属性、表达式注入：bean属性注入需要注入者和被注入者属于同一个IOC容器，或者父子IOC容器关系，在同一个作用域内。
+
+      ```java
+      // 注入其他Bean属性：注入beanInject对象的属性another，类具体定义见下面
+      @Value("#{beanInject.another}")
+      private String fromAnotherBean; 
+      // 注入操作系统属性
+      @Value("#{systemProperties['os.name']}")
+      private String systemPropertiesName; 
+      //注入表达式结果
+      @Value("#{T(java.lang.Math).random() * 100.0 }")
+      private double randomNumber;
+      ```
+      
+   3. 配置文件注入同理
+   
+      ```java
+      @Value("${app.name}")
+      private String appName;
+      ```
 
 
 
+#### AOP annotation
+
+见下文AOP
+
+@Aspect 声明一个切面（类上）
+
+使用@After、@Before、@Around定义建言（advice），可直接将拦截规则（切点）作为参数。
+
+@After 在方法执行之后执行（方法上）
+
+@Before 在方法执行之前执行（方法上）
+
+@Around 在方法执行之前与之后执行（方法上）
+
+@PointCut 声明切点
 
 
 
+#### HTTP request
 
+1. GET
 
+   请求从服务器获取特定资源。
+
+   @GetMapping("users") == @RequestMapping(value="/users",method=RequestMethod.GET)
+
+2. POST
+
+   在服务器上创建一个新的资源。
+
+   @PostMapping("users") == @RequestMapping(value="/users",method=RequestMethod.POST)
+
+3. PUT
+
+   更新服务器上的资源。
+
+   @PutMapping("/users/{userId}") == @RequestMapping(value="/users/{userId}",method=RequestMethod.PUT)
+
+4. DELETE
+
+   从服务器上删除特定的资源。
+
+   @DeleteMapping("/users/{userId}") == @RequestMapping(value="/users/{userId}",method=RequestMethod.DELETE)	
+
+   
+
+#### Front-Back End DataTrans
+
+1. @PathVariable和@RequestParam
+
+   PathVariable用于获取路径参数，@RequestParam用于获取查询数据。
+
+   ```java
+   @RequestMapping("/class/{classId}/teachers")
+   public List<Teacher> getClassRelatedTeachers(@PathVariable("classId") Long classId, @RequestParam(value="type", required = false, ) String type)
+   ```
+
+   如果我们的url传入进来/class/G3CA/teachers?type=top，那么获取到的数据就是classId为G3CA，type为top
+
+2. @RequestBody
+
+   用于读取 Request 请求（可能是 POST,PUT,DELETE,GET 请求）的 body 部分并且**Content-Type 为 application/json** 格式的数据，接收到数据之后会自动将数据绑定到 Java 对象上去。系统会使用`HttpMessageConverter`或者自定义的`HttpMessageConverter`将请求的 body 中的 json 字符串转换为 java 对象。
+
+   假设JSON：
+
+   ```json
+   {
+       "city": "shanghai",
+       "nation": "China",
+   }
+   ```
+
+   Java类：
+
+   ```java
+   @Data
+   public class Person {
+       privata String city;
+      	private String nation;
+   }
+   ```
+
+   此时
+
+   ```java
+   @PostMapping
+   public ResponseEntity signUp(@RequestBody Person person) {
+       service.save(person);
+       return ResponseEntity.ok().build();
+   }
+   ```
+
+   @RequestBody会直接将JSON转为Java对象.
 
 
 

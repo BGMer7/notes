@@ -355,7 +355,7 @@ public class DemoApplication {
 
 @Resource是jdk提供的注解，它默认使用byName进行装配，byName无法装配则使用byType；
 
- @Autowired是spring提供的注解，@Autowired默认使用byType进行装配，byType无法装配则使用byName，如果接口有多个实现类，需要配合@Qualifier注解使用。
+@Autowired是spring提供的注解，@Autowired默认使用byType进行装配，byType无法装配则使用byName，如果接口有多个实现类，需要配合@Qualifier注解使用。
 ————————————————
 版权声明：本文为CSDN博主「_云卷云舒_」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
 原文链接：https://blog.csdn.net/Alexshi5/article/details/84000678
