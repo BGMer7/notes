@@ -1526,7 +1526,30 @@ class cl = new class(String);
    }
    ```
 
-   @RequestBody会直接将JSON转为Java对象.
+   @RequestBody会直接将JSON转为Java对象。
+
+
+
+#### validation
+
+```java
+@NotEmpty 被注释的字符串不能为Null也不能为空
+@NotBlank 被注释的字符串非null，必须包含一个非空白字符
+@Null 被注释的元素必须为Null
+@NotNull 被注释的元素不徐为Null
+@AssertTrue 被注释的元素必须为True
+@AssertFalse 被注释的元素必须为false
+@Pattern(regex=, flag=) 被注释的元素必须符合指定的正则表达式
+@Email 被注释的元素必须是Email格式
+@Min(value) 被注释的元素必须是一个数字，其值必须大于等于指定的最小值
+@Max(value) 被注释的元素必须是一个数字，其值必须小于等于指定的最大值
+@DecimalMin(value) 被注释的元素必须是一个数字，其值必须大于等于指定的最小值
+@DecimalMax(value) 被注释的元素必须是一个数字，其值必须小于等于指定的最大值
+@Past 被注释的元素必须是一个过去的日期
+@Future 被注释的元素必须是一个将来的日期 
+```
+
+
 
 
 
@@ -4295,5 +4318,266 @@ System.out.println(ary.get(0));
 
 
 
+## MyBatis
 
+### select
+
+多数情况下，查询要比修改频繁，对每个插入、更新或者删除操作，通常对应多个查询。是 MyBatis 的基本原则之一，也是将焦点和努力放到查询和结果映射的原因。简单查询的 select 元素是非常简单的。
+
+```xml
+<select id="selectPerson" parameterType="int" resultType="hashmap">
+    SELECT * FROM PERSON WHERE ID = #{id}
+</select>
+```
+
+接受一个int传入参数，返回一个hashmap。
+
+| 属性             | 描述                                                         |
+| :--------------- | :----------------------------------------------------------- |
+| `id`             | 在命名空间中唯一的标识符，可以被用来引用这条语句。           |
+| `parameterType`  | 将会传入这条语句的参数类的完全限定名或别名。这个属性是可选的，因为 MyBatis 可以通过 TypeHandler 推断出具体传入语句的参数，默认值为 unset。 |
+| ~~parameterMap~~ | ~~这是引用外部 parameterMap 的已经被废弃的方法。使用内联参数映射和 parameterType 属性。~~ |
+| `resultType`     | 从这条语句中返回的期望类型的类的完全限定名或别名。注意如果是集合情形，那应该是集合可以包含的类型，而不能是集合本身。使用 resultType 或 resultMap，但不能同时使用。 |
+| `resultMap`      | 外部 resultMap 的命名引用。结果集的映射是 MyBatis 最强大的特性，对其有一个很好的理解的话，许多复杂映射的情形都能迎刃而解。使用 resultMap 或 resultType，但不能同时使用。 |
+| `flushCache`     | 将其设置为 true，任何时候只要语句被调用，都会导致本地缓存和二级缓存都会被清空，默认值：false。 |
+| `useCache`       | 将其设置为 true，将会导致本条语句的结果被二级缓存，默认值：对 select 元素为 true。 |
+| `timeout`        | 这个设置是在抛出异常之前，驱动程序等待数据库返回请求结果的秒数。默认值为 unset（依赖驱动）。 |
+| `fetchSize`      | 这是尝试影响驱动程序每次批量返回的结果行数和这个设置值相等。默认值为 unset（依赖驱动）。 |
+| `statementType`  | STATEMENT，PREPARED 或 CALLABLE 的一个。这会让 MyBatis 分别使用 Statement，PreparedStatement 或 CallableStatement，默认值：PREPARED。 |
+| `resultSetType`  | FORWARD_ONLY，SCROLL_SENSITIVE 或 SCROLL_INSENSITIVE 中的一个，默认值为 unset （依赖驱动）。 |
+| `databaseId`     | 如果配置了 databaseIdProvider，MyBatis 会加载所有的不带 databaseId 或匹配当前 databaseId 的语句；如果带或者不带的语句都有，则不带的会被忽略。 |
+| `resultOrdered`  | 这个设置仅针对嵌套结果 select 语句适用：如果为 true，就是假设包含了嵌套结果集或是分组了，这样的话当返回一个主结果行的时候，就不会发生有对前面结果集的引用的情况。这就使得在获取嵌套的结果集的时候不至于导致内存不够用。默认值：`false`。 |
+| `resultSets`     | 这个设置仅对多结果集的情况适用，它将列出语句执行后返回的结果集并每个结果集给一个名称，名称是逗号分隔的。 |
+
+
+
+### insert
+
+```xml
+<insert
+  id="insertAuthor"
+  parameterType="domain.blog.Author"
+  flushCache="true"
+  statementType="PREPARED"
+  keyProperty=""
+  keyColumn=""
+  useGeneratedKeys=""
+  timeout="20">
+```
+
+
+
+### update
+
+```xml
+<update
+  id="updateAuthor"
+  parameterType="domain.blog.Author"
+  flushCache="true"
+  statementType="PREPARED"
+  timeout="20">
+```
+
+
+
+### delete
+
+```xml
+<delete
+  id="deleteAuthor"
+  parameterType="domain.blog.Author"
+  flushCache="true"
+  statementType="PREPARED"
+  timeout="20">
+```
+
+| 属性               | 描述                                                         |
+| :----------------- | :----------------------------------------------------------- |
+| `id`               | 命名空间中的唯一标识符，可被用来代表这条语句。               |
+| `parameterType`    | 将要传入语句的参数的完全限定类名或别名。这个属性是可选的，因为 MyBatis 可以通过 TypeHandler 推断出具体传入语句的参数，默认值为 unset。 |
+| `parameterMap`     | ~~这是引用外部 parameterMap 的已经被废弃的方法。使用内联参数映射和 parameterType 属性。~~ |
+| `flushCache`       | 将其设置为 true，任何时候只要语句被调用，都会导致本地缓存和二级缓存都会被清空，默认值：true（对应插入、更新和删除语句）。 |
+| `timeout`          | 这个设置是在抛出异常之前，驱动程序等待数据库返回请求结果的秒数。默认值为 unset（依赖驱动）。 |
+| `statementType`    | STATEMENT，PREPARED 或 CALLABLE 的一个。这会让 MyBatis 分别使用 Statement，PreparedStatement 或 CallableStatement，默认值：PREPARED。 |
+| `useGeneratedKeys` | （仅对 insert 和 update 有用）这会令 MyBatis 使用 JDBC 的 getGeneratedKeys 方法来取出由数据库内部生成的主键（比如：像 MySQL 和 SQL Server 这样的关系数据库管理系统的自动递增字段），默认值：false。 |
+| `keyProperty`      | （仅对 insert 和 update 有用）唯一标记一个属性，MyBatis 会通过 getGeneratedKeys 的返回值或者通过 insert 语句的 selectKey 子元素设置它的键值，默认：`unset`。如果希望得到多个生成的列，也可以是逗号分隔的属性名称列表。 |
+| `keyColumn`        | （仅对 insert 和 update 有用）通过生成的键值设置表中的列名，这个设置仅在某些数据库（像 PostgreSQL）是必须的，当主键列不是表中的第一列的时候需要设置。如果希望得到多个生成的列，也可以是逗号分隔的属性名称列表。 |
+| `databaseId`       | 如果配置了 databaseIdProvider，MyBatis 会加载所有的不带 databaseId 或匹配当前 databaseId 的语句；如果带或者不带的语句都有，则不带的会被忽略。 |
+
+
+
+#### #{}&${}
+
+1）#{}是预编译处理，$ {}是字符串替换。
+
+2）MyBatis在处理#{}时，会将SQL中的#{}替换为?号，使用PreparedStatement的set方法来赋值；MyBatis在处理 ${} 时，就是把 ${} 替换成变量的值。
+
+3）使用 #{} 可以有效的防止SQL注入，提高系统安全性。
+
+
+
+### sql
+
+这个元素可以被用来定义可重用的 SQL 代码段，可以包含在其他语句中。它可以被静态地（在加载参数）参数化. 不同的属性值通过包含的实例变化. 比如：
+
+```xml
+<sql id="userColumns"> ${alias}.id,${alias}.username,${alias}.password </sql>
+```
+
+这个SQL片段可以包括在其他语句中间
+
+```xml
+<select id="selectUsers" resultType="map">
+	select
+	 	<include refid="userColumns"><property name="alias" value="t1"/><include>,
+	 	<include refid="userColumns"><property name="alias" value="t2"/><include>
+	from some_table1 t1
+	cross join some_table2 t2
+</select>
+```
+
+
+
+### resultMap
+
+MyBatis中的简单的映射不需要resultMap，只需要一个map就可以将结果映射。
+
+```xml
+<select id="selectUsers" resultType="map">
+    select id, username, gender
+    from table_name
+    where city=#{city}
+</select>
+```
+
+**查询结果将所有的结果都映射到HashMap的键值映射上**，由resultType的属性指定。
+
+但是并不是所有的逻辑映射关系都可以使用HashMap解决，在实际逻辑中，大概率会遇到需要使用自定义的Java Bean或者POJO作为领域模型，如果是Java Bean或者POJO，Mybatis的支持如下：
+
+假设一个Java Bean被设计为：
+
+```java 
+@Data
+public class User {
+    public int id;
+    public String username;
+    public String gender;
+    public String city;
+}
+```
+
+**此时每个Java Bean模型都可以和数据库中的数据形成映射关系**，假设这个Java Bean的路径是com.someapp.model.User，那么我们可以直接在MyBatis中直接传入这resultType、
+
+```xml
+<select id="selectUsers" resultType="com.someapp.model.User">
+    select id, username, gender
+    from table_name
+    where city=#{city}
+</select>
+```
+
+但是如果这个Java Bean需要在MyBatis中频繁使用，**使用路径的话就输入比较麻烦，所以可以采用类型别名的办法，给这个Java Beanqi一个名字。**
+
+```xml
+<!-- In mybatis-config.xml file -->
+<typeAlias type="com.someapp.model.User" alias="User"/>
+
+<!-- In SQL Mapping XML file -->
+<select id="selectUsers" resultType="User">
+    select id, username, hashedPassword
+    from some_table
+    where id = #{id}
+</select>
+```
+
+在这种情况下，MyBatis会在幕后创建一个resultMap，再基于属性名进行映射到Java Bean上，如果列名和属性名没有精确对应，可以再select中对列使用别名，来匹配标签，
+
+```xml
+<select id="selectUser" resultType="User">
+	select 
+    	user_id as "id",
+    	user_name as "name",
+    	user_gender as "gender"
+    from table_name
+    where city=#{city}
+</select>
+```
+
+除此之外，还可以自定义外部的resultMap，这也可以解决列名不匹配
+
+```xml
+<resultMap id="userResultMap" type="User">
+	<id property="id" column="user_name"></id>
+    <result property="name" column="user_name"></result>
+    <result property="gender" column="user_gender"></result>
+</resultMap>
+```
+
+这个有唯一id的resultMap就可以被别的xml语句直接引用，xml将查询结果映射到Java Bean。
+
+```xml
+<select id="selectUsers" resultMap="userResultMap">
+  	select user_id, user_name, hashed_password
+  	from some_table
+  	where id = #{id}
+</select>
+```
+
+
+
+#### resultMap model
+
+1. constructor-用于在实例化的时候，注入结果到构造方法中，
+
+   idArg-ID参数：标记处用作id的结果参数可以提升整体性能
+
+   arg：被注入到构造方法中的普通结果
+
+2. id-标记出作为id的结果参数可以提升整体性能
+
+3. result-注入到字段或者Java Bean的普通结果
+
+4. association-一个复杂类型的关联，许多结果包装成这种类型
+
+   嵌套结果映射：关联也可以指定为一个resultMap，或者引用一个
+
+5. collection-一个复杂类型的集合
+
+   嵌套结果映射，集合可以指定为一个resultMap元素，或者引用一个
+
+6. discriminator-使用结果值来确定使用哪个resultMap
+
+
+
+```xml
+<id property="id" column="post_id"/>
+<result property="subject" column="post_subject"/>
+```
+
+这两者之间的唯一不同是， id 表示的结果将是对象的标识属性，这会在比较对象实例时用到。这样可以提高整体的性能，尤其是缓存和嵌套结果映射(也就是联合映射)的时候。
+
+
+
+resultMap 属性的结果映射不同。
+
+| 属性          | 描述                                                         |
+| :------------ | :----------------------------------------------------------- |
+| `property`    | 映射到列结果的字段或属性。如果用来匹配的 JavaBeans 存在给定名字的属性，那么它将会被使用。否则 MyBatis 将会寻找与给定名称相同的字段。这两种情形你可以使用通常点式的复杂属性导航。比如,你可以这样映射一 些 东 西 :“ username ”, 或 者 映 射 到 一 些 复 杂 的 东 西 :“address.street.number”。 |
+| `javaType`    | 一个 Java 类的完全限定名,或一个类型别名(参考上面内建类型别名的列表)。如果你映射到一个 JavaBean,MyBatis 通常可以断定类型。然而,如javaType果你映射到的是 HashMap,那么你应该明确地指定 javaType 来保证所需的行为。 |
+| `jdbcType`    | 在这个表格之前的所支持的 JDBC 类型列表中的类型。JDBC 类型是仅仅需要对插入,更新和删除操作可能为空的列进行处理。这是 JDBC 的需要,jdbcType而不是 MyBatis 的。如果你直接使用 JDBC 编程,你需要指定这个类型-但仅仅对可能为空的值。 |
+| `typeHandler` | 我们在前面讨论过默认的类型处理器。使用这个属性,你可以覆盖默认的typeHandler类型处理器。这个属性值是类的完全限定名或者是一个类型处理器的实现,或者是类型别名。 |
+
+
+
+#### 关联的嵌套查询
+
+| 属性        | 描述                                                         |
+| :---------- | :----------------------------------------------------------- |
+| `column`    | 来自数据库的列名,或重命名的列标签。这和通常传递给resultSet.getString(columnName)方法的字符串是相同的。column注 意 : 要 处 理 复 合 主 键 , 你 可 以 指 定 多 个 列 名 通 过 column= ”{prop1=col1,prop2=col2} ” 这种语法来传递给嵌套查询语 句。这会引起prop1 和 prop2 以参数对象形式来设置给目标嵌套查询语句。 |
+| `select`    | 另外一个映射语句的 ID,可以加载这个属性映射需要的复杂类型。获取的在列属性中指定的列的值将被传递给目标 select 语句作为参数。表格后面有一个详细的示例。select注 意 : 要 处 理 复 合 主 键 , 你 可 以 指 定 多 个 列 名 通 过 column= ”{prop1=col1,prop2=col2} ” 这种语法来传递给嵌套查询语 句。这会引起prop1 和 prop2 以参数对象形式来设置给目标嵌套查询语句。 |
+| `fetchType` | 可选的。有效值为 `lazy`和`eager`。如果使用了，它将取代全局配置参数`lazyLoadingEnabled`。 |
+
+
+
+[Mybatis基本sql语法_jtkjtj的博客-CSDN博客_mybatis sql](https://blog.csdn.net/jtkjtj/article/details/80242936)
 
