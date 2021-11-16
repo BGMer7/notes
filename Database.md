@@ -1,6 +1,6 @@
 ## Database
 
-#### 最基础的SQL命令
+### 最基础的SQL命令
 
 SELECT
 DELETE
