@@ -976,6 +976,74 @@ total 1900
 
 
 
+#### Linux统计文件
+
+统计文件的字节数、字数、行数
+
+**wc命令** 统计指定文件中的字节数、字数、行数，并将统计结果显示输出。利用wc指令我们可以计算文件的Byte数、字数或是列数，若不指定文件名称，或是所给予的文件名为“-”，则wc指令会从标准输入设备读取数据。wc同时也给出所指定文件的总统计数。
+
+```shell
+-c # 统计字节数，或--bytes或——chars：只显示Bytes数；。
+-l # 统计行数，或——lines：只显示列数；。
+-m # 统计字符数。这个标志不能与 -c 标志一起使用。
+-w # 统计字数，或——words：只显示字数。一个字被定义为由空白、跳格或换行字符分隔的字符串。
+-L # 打印最长行的长度。
+-help     # 显示帮助信息
+--version # 显示版本信息
+```
+
+实例：
+
+```shell
+wc -l *       # 统计当前目录下的所有文件行数及总计行数。
+wc -l *.js    # 统计当前目录下的所有 .js 后缀的文件行数及总计行数。
+find  . * | xargs wc -l # 当前目录以及子目录的所有文件行数及总计行数。
+```
+
+查看文件的字节数、字数、行数
+
+```shell
+wc test.txt
+# 输出结果
+7     8     70     test.txt
+# 行数 单词数 字节数 文件名
+```
+
+用wc命令怎么做到只打印统计数字不打印文件名
+
+```shell
+wc -l < test.txt
+# 输出结果
+7
+```
+
+用来统计当前目录下的文件数(不包含隐藏文件)
+
+```shell
+# 要去除TOTAL行
+expr $(ls -l | wc -l) - 1
+# 输出结果
+8
+```
+
+统计当前目录下的所有文件行数及总计行数
+
+```shell
+[root@centos7 ~]# wc -l *
+      21 LICENSE
+     270 README.md
+wc: example: read: Is a directory
+     785 lerna-debug.log
+      25 lerna.json
+wc: node_modules: read: Is a directory
+   23603 package-lock.json
+      79 package.json
+       3 renovate.json
+   24786 total
+```
+
+
+
 ### Linux的目录结构
 
 [深入理解linux系统的目录结构（总结的非常详细）_反者道之动；弱者道之用-CSDN博客_linux系统目录结构](https://blog.csdn.net/yup1212/article/details/82152106)
@@ -985,6 +1053,40 @@ total 1900
 ### Linux查看内存、硬盘
 
 [linux 查看空间（内存、磁盘、文件目录、分区）的几个命令_愿我如星君如月 ... 夜夜流光相皎洁 ...-CSDN博客_linux查看磁盘空间 命令](https://blog.csdn.net/jiangyu1013/article/details/86685893)
+
+
+
+### Linux防火墙
+
+查看防火墙状态：systemctl status firewalld
+
+开启防火墙：systemctl start firewalld  
+
+开启防火墙：service firewalld start
+
+关闭防火墙：systemctl stop firewalld
+
+若遇到无法开启
+     先用：systemctl unmask firewalld.service 
+     然后：systemctl start firewalld.service
+
+
+
+### Linux端口
+
+查看指定端口是否已经打开：firewall-cmd --query-port=6379/tcp
+
+查看UDP类型：netstat -nupl 
+
+查看TCP类型：netstat -ntpl
+
+开放指定端口：firewall-cmd --zone=public --add-port=1935/tcp --permanent
+
+重载入添加的端口：firewall-cmd --reload
+
+查询指定端口是否开启成功：firewall-cmd --query-port=123/tcp
+
+移除指定端口：firewall-cmd --permanent --remove-port=123/tcp
 
 
 
@@ -1078,6 +1180,278 @@ gatsby@ubuntu:~/Desktop/git$ which stress
 
 
 
+## Shell Script
+
+### What's shell
+
+[学习如何编写 Shell 脚本（基础篇） - 掘金 (juejin.cn)](https://juejin.cn/post/6930013333454061575)
+
+Shell可以是一个程序，提供一个和用户对话的环境，这个环境只有一个命令提示符，让用户从键盘键入命令，所以又被称为命令行环境，command line interface，简写为cli。shell接受用户的输入，将命令传输到操作系统，并将结果返回给用户。
+
+
+
+Shell也可以是一个命令解释器， 解释用户输入的命令，支持变量、条件判断、循环操作等语法，所以用户可以用shell命令写出程序，又称为script。这些脚本都通过shell的解释执行，而不通过编译。
+
+
+
+Shell不像C语言、C++、Java等高级语言程序，但是**shell可以帮助我们完成一些自动化的任务，例如：保存数据、监测系统的负载等等**。
+
+
+
+Shell是完全嵌入在Linux中的，不需要安装、编译。
+
+
+
+### Shell的种类
+
+1. Bourne Shell（sh），是所有shell的祖先，被安装在所有类Unix的操作系统中。
+2. Bourne Again Shell（bash），sh的一个进化版本，比sh更加优秀，被默认安装在所有的Linux发行版本和MacOS上。
+3. C Shell，语法类似C语言。
+
+
+
+### .sh Script
+
+```shell
+#!/bin/bash
+
+# 执行的命令主体
+ls
+echo "hello world"
+```
+
+
+
+#!/bin/bash 指定脚本使用shell为bash
+
+#!表示后面的指令作为解析器
+
+
+
+如果不是root用户的话，需要给脚本添加权限，`chmod +x hello.sh`。
+
+增加权限之后可以执行`./hello.sh`运行脚本，也可以使用`bash -x hello.sh`进入调试模式。
+
+
+
+#### 引号
+
+单引号 `''` ，单引号用于保留字符的字面含义，各种特殊字符在单引号里面，都会变为普通字符，比如星号`*` 、美元符号`$` 、反斜杠 `\` 等。
+
+双引号 `""` ，双引号比单引号宽松，大部分特殊字符在双引号里面，都会失去特殊含义，变成普通字符。三个特殊字符除外：美元符号 `$` 、反引号 ``` 和反斜杠 `\` 。
+
+反引号 `` `，要求 `Shell` 执行被它括起来的内容，例如执行 echo `pwd`，相当于直接执行 `pwd` 命令 。
+
+
+
+#### 变量
+
+- 变量由字母、数字、下划线组成。
+
+- 第一个字符必须是一个字母或者一个下划线，不能是数字。
+
+- 不允许出现空格和标点符号。
+
+
+```shell
+message="hello world"
+echo $message # 打印message变量
+```
+
+
+
+#### 参数变量
+
+调用shell脚本的时候同时可以传参，`./script_name.sh var1 var2 var3...` 这样的var1、var2叫做参数变量。
+
+Shell中获取参数使用：
+
+- `$#` 参数的数目
+- `$0` 被运行的脚本名称
+- `$1` 第一个参数
+- `$2` 第二个参数
+- `$N` 第N个参数
+
+
+
+#### 数组
+
+```shell
+#!/bin/bash
+# 定义数组
+array=("v1" "v2" "v3")
+
+# 访问数组
+echo ${array[2]}
+echo ${array[*]} # 访问所有的元素
+```
+
+
+
+#### 数学运算
+
+```shell 
+let a="1"
+let b="2"
+echo $a+$b # 1+2
+let c="$a+$b"
+echo "c=$c" # c=3
+```
+
+
+
+#### read
+
+```shell
+#!/bin/bash
+
+read -p '请输入姓名' name
+
+echo "hello $name !"
+```
+
+执行 `./read.sh` 时，会发现光标处于接收输入的状态，此时我们输入一个字符串 `lion` 按下回车键后，控制台会打印出 `hello lion` 。
+
+同时也可以同时赋值多个变量，read var1 var2。
+
+read的一些参数：
+
+`read` 命令的 `-p` 参数， `p` 是 `prompt` 的首字母，表示“提示”。
+
+用 `-n` 参数可以限制用户输入的字符串的最大长度（字符数）。
+
+用 `-t` 参数可以限定用户的输入时间（单位：秒）超过这个时间，就不读取输入了。
+
+用 `-s` 参数可以隐藏输入内容，在用户输入密码时使用。
+
+
+
+#### 条件语句
+
+```shell	
+if [ 条件测试 ] # 条件测试左右必须要有空格
+then
+	...
+fi # 结束符
+
+或者
+
+if [ 条件测试 ]; then
+	...
+fi  
+
+# ---------
+name="lion"
+
+if [ $name = 'lion' ]; then # 这里使用 = 做判断条件，而不是 ==
+    echo "hello $name"
+fi
+
+# ---------
+if [ $n1 = $n2 ]
+then
+    echo "n1=n2"
+else
+    echo "n1!=n2"
+fi 
+
+# ---------
+#!/bin/bash
+
+if [ $1 = "lion" ]
+then
+	echo "hello lion"
+elif [ $1 = "frank" ]  
+then 
+	echo "hello frank"
+else
+	echo "我不认识你"
+fi
+```
+
+
+
+#### while循环
+
+```shell
+#!/bin/bash
+
+while [ -z $response ] || [ $response != 'yes' ] # 输入的语句为空或者不是yes就会一直循环
+do
+    read -p 'Say yes：' response
+done 
+```
+
+
+
+#### for循环
+
+```shell
+#!/bin/bash
+
+# 遍历一组值
+for animal in 'dog' 'cat' 'pig'
+do
+    echo "$animal"
+done
+
+# 遍历 ls 命令的执行结果
+listfile=`ls`
+for file in $listfile
+do
+	echo "$file"
+done
+
+# 借助 seq 的 for 循环（seq后面会详细讲解）
+for i in `seq 1 10`
+do
+	echo $i
+done  
+
+```
+
+
+
+#### 函数
+
+```shell
+#!/bin/bash
+
+print_something(){
+    echo "我是一个函数"
+}
+print_something # 调用
+
+# ------传参-----
+#!/bin/bash
+
+print_something(){
+    echo "hello $1" # $1 获取第一个参数
+}
+print_something Lion # Lion 为参数
+print_something Frank # Frank 为参数
+
+# ------return------
+#!/bin/bash
+
+print_something(){
+    echo "Hello $1"
+    return 1
+}
+
+print_something Lion
+
+echo "函数的返回值是 $?" # $? 获取到的是上一个函数的返回值
+```
+
+[学习如何编写 Shell 脚本（基础篇） - 掘金 (juejin.cn)](https://juejin.cn/post/6930013333454061575#heading-16)
+
+
+
+
+
+
+
 # C++
 
 在Linux系统下，并不是依靠文件的后缀去选择相对应的执行程序，因此Linux的后缀其实只是用来给程序员看的，用于识别这是什么程序。
@@ -1141,3 +1515,4 @@ gcc main.c -o main
 不要加空格，否则就是进入目录。只需要这样就可以执行这个可执行文件，输出将会输出在命令行。
 
 编译的时候可以加上-Wall，用于输出错误和提示的参数。
+
