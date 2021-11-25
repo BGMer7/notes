@@ -1050,9 +1050,98 @@ wc: node_modules: read: Is a directory
 
 
 
-### Linux查看内存、硬盘
+### Linux磁盘管理
 
 [linux 查看空间（内存、磁盘、文件目录、分区）的几个命令_愿我如星君如月 ... 夜夜流光相皎洁 ...-CSDN博客_linux查看磁盘空间 命令](https://blog.csdn.net/jiangyu1013/article/details/86685893)
+
+#### df(disk full)
+
+```shell
+df [-ahikHTm] [目录或者文件]
+```
+
+- -a ：列出所有的文件系统，包括系统特有的 /proc 等文件系统；
+- -k ：以 KBytes 的容量显示各文件系统；
+- -m ：以 MBytes 的容量显示各文件系统；
+- -h ：以人们较易阅读的 GBytes, MBytes, KBytes 等格式自行显示；
+- -H ：以 M=1000K 取代 M=1024K 的进位方式；
+- -T ：显示文件系统类型, 连同该 partition 的 filesystem 名称 (例如 ext3) 也列出；
+- -i ：不用硬盘容量，而以 inode 的数量来显示
+
+
+
+#### du
+
+Linux du 命令也是查看使用空间的，但是与 df 命令不同的是 Linux du 命令是对文件和目录磁盘使用的空间的查看。
+
+```
+du [-ahskm] 文件或目录名称
+```
+
+```shell
+[root@localhost /]# du -h | head -n 10
+0       ./boot/efi/EFI/centos
+0       ./boot/efi/EFI
+0       ./boot/efi
+2.4M    ./boot/grub2/i386-pc
+3.2M    ./boot/grub2/locale
+2.5M    ./boot/grub2/fonts
+8.0M    ./boot/grub2
+4.0K    ./boot/grub
+110M    ./boot
+0       ./dev/snd
+```
+
+
+
+#### fdisk
+
+```shell
+fdisk [-l] 装置名称
+```
+- -l ：输出后面接的装置所有的分区内容。若仅有 fdisk -l 时， 则系统将会把整个系统内能够搜寻到的装置的分区均列出来。
+
+```shell 
+[root@localhost /]# fdisk -l
+
+Disk /dev/sda: 536.9 GB, 536870912000 bytes, 1048576000 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk label type: dos
+Disk identifier: 0x000a645d
+
+   Device Boot      Start         End      Blocks   Id  System
+/dev/sda1   *        2048     2099199     1048576   83  Linux
+/dev/sda2         2099200  1048575999   523238400   8e  Linux LVM
+
+Disk /dev/mapper/centos-root: 53.7 GB, 53687091200 bytes, 104857600 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+
+
+Disk /dev/mapper/centos-swap: 4630 MB, 4630511616 bytes, 9043968 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+
+
+Disk /dev/mapper/centos-home: 477.5 GB, 477471178752 bytes, 932560896 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+```
+
+
+
+### Linux挂载磁盘
+
+1. 首先查看是否已经有数据盘，如果单独有数据盘，且数据盘没有分区和挂载，那么使用`df -l`命令是看不到的。
+
+   此时使用`fdisk`查看可以看到有哪些硬盘。
+
+2. 对磁盘分区使用`fdisk /dev/vdb`，根据提示输n、p、1、1、wq，回车，创建分区。
 
 
 
