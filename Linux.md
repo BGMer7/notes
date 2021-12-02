@@ -1044,13 +1044,56 @@ wc: node_modules: read: Is a directory
 
 
 
+### Linux的删除
+
+```
+rm [options] name...
+```
+
+- -i 删除前逐一询问确认。
+- -f 即使原档案属性设为唯读，亦直接删除，无需逐一确认。
+- -r 将目录及以下之档案亦逐一删除。
+
+```shell
+# rm  test.txt 
+rm：是否删除 一般文件 "test.txt"? y  
+# rm  homework  
+rm: 无法删除目录"homework": 是一个目录  
+# rm  -r  homework  
+rm：是否删除 目录 "homework"? y 
+
+rm  -r  * 
+```
+
+文件一旦通过rm命令删除，则无法恢复，所以必须格外小心地使用该命令。
+
+**当删除根目录时 rm 是如何工作的?**
+
+当然，删除根目录（`/`）是 Linux 用户最不想要的操作。这也就是为什么默认 `rm` 命令不支持在根目录上执行递归删除操作。（LCTT 译注：早期的 `rm` 命令并无此预防行为。）
+
+然而，如果你非得完成这个操作，你需要使用 `--no-preserve-root` 选项。当提供此选项，`rm` 就不会特殊处理根目录（`/`）了。
+
+
+
+**仅删除空目录**
+
+假如你需要 `rm` 在删除目录时仅删除空目录，你可以使用 `-d` 选项。
+
+```text
+rm -d [目录]
+```
+
+下面的截图展示 `-d` 选项的用途——仅空目录被删除了。
+
+
+
 ### Linux的目录结构
 
 [深入理解linux系统的目录结构（总结的非常详细）_反者道之动；弱者道之用-CSDN博客_linux系统目录结构](https://blog.csdn.net/yup1212/article/details/82152106)
 
 
 
-### Linux磁盘管理
+### Linux的磁盘管理
 
 [linux 查看空间（内存、磁盘、文件目录、分区）的几个命令_愿我如星君如月 ... 夜夜流光相皎洁 ...-CSDN博客_linux查看磁盘空间 命令](https://blog.csdn.net/jiangyu1013/article/details/86685893)
 
