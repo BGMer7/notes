@@ -429,11 +429,77 @@ public class DemoApplication {
 
 
 
+
+
+
+
+
+
+## lombok tag
+
+[lombok标签之@Data @AllArgsConstructor @@NoArgsConstructor -如何去除get，set方法。@Data注解和如何使用，lombok - aspirant - 博客园 (cnblogs.com)](https://www.cnblogs.com/aspirant/p/10298752.html)
+
+### @Expose
+
+
+
+
+
+### @Getter/Setter
+
+注解在类上, 为类提供读写属性
+
+
+
+### @ToString
+
+注解在类上, 为类提供 toString() 方法
+
+
+
+### @NotNull
+
+@NonNull : 注解在参数上, 如果该类参数为 null , 就会报出异常, throw new NullPointException(参数名)
+
+
+
+### @AllArgsConstructor
+
+会生成一个包含所有变量，同时如果变量使用了@NotNull的注解，会进行是否为空的校验
+
+全部参数的构造函数的自动生成，该注解的作用域也只是在实体类上，参数的顺序与属性的定义顺序一致。
+
+
+
+### @NoArgsConstructor
+
+自动生成无参构造函数。
+
+
+
+### @RequiredArgsConstructor
+
+会生成一个包含常量（final），和标识了@NotNull的变量的构造方法。
+
+
+
 ### @Data
 
+注解在类上, 为类提供读写属性, 此外还提供了 equals()、hashCode()、toString() 方法
+
+主要作用是提高代码的简洁性，去除一些机械性和重复的getter和setter方法
 
 
 
+### @Log4j
+
+注解在类上，为类提供一个属性名为log的log4j日志对象
+
+
+
+### @Slf4j
+
+注解在类上，为类提供一个属性名为log的slf4j日志对象
 
 
 
