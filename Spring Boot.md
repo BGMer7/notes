@@ -380,8 +380,6 @@ public class DemoApplication {
 
 在处理JSON的时候需要用到spring框架特有的注解@ResponseBody或者@RestController注解，这两个注解都会处理返回的数据格式，使用了该类型注解后返回的不再是视图，不会进行转跳，而是返回JSON或xml数据格式，输出在页面上。
 
-
-
 @RestController，一般是使用在类上的，其实就是结合了@Controller和@ResponseBody两个注解。
 
 @ResponseBody，一般是使用在单独的方法上的，需要哪个方法返回json数据格式，就在哪个方法上使用，具有针对性。
@@ -535,6 +533,114 @@ public class ApplicationListenerEnvironmentPrepared implements ApplicationListen
 ### JpaRepository
 
 
+
+
+
+
+
+
+
+### ResponseEntity
+
+@ResponseEntity和@ResponseBody
+
+首先如果在Controller的某个方法上加上@ResponseBody注解，就可以拿到Json格式的数据。
+
+**其将方法的返回值通过适当的转换器转换为指定的格式之后，写入到 response 对象的 body 区，通常用来给客户端返回 JSON 数据或者是 XML 数据，当方法上面没有写 ResponseBody 时，底层会将方法的返回值封装为 ModelAndView 对象；需要注意的是，在使用此注解之后不会再走试图处理器，而是直接将数据写入到输入流中，他的效果等同于通过 response 对象输出指定格式的数据。**
+
+简单来说：@RestController=Controller+ResponseBody
+
+但是对于一个完整的Http响应来说，ResponseBody只是响应体，Http的响应除了响应体之外，还有状态码，放在注解中就是@ResponseStatus。
+
+[@ResponseBody ResponseEntity - niceyoo - 博客园 (cnblogs.com)](https://www.cnblogs.com/niceyoo/p/10092826.html)
+
+ResponseEntity继承的是HttpEntity的类，可以添加状态码，被用于RestTemplate和Controller。
+
+```java 
+@GetMapping("list")
+public ResponseEntity<List<Category>> queryCategoryListByPid(@RequestParam("pid")Long pid){
+   return ResponseEntity.ok( mCategoryService.queryCategoryListByPid(pid) );
+}
+```
+
+`ResponseEntity<T> `，泛型T 表示要设置的返回的 **响应体**，而 ResponseEntity.ok() 表示设置的状态码 200，而 ResponseEntity.ok() 其实是一种快捷的写法，如果不这样写的话：
+
+```java
+@GetMapping("list")
+ public ResponseEntity<List<Category>> queryCategoryListByPid(@RequestParam("pid")Long pid){
+    //return  ResponseEntity.status(200).body(mCategoryService.queryCategoryListByPid(pid));
+    //或者
+    return ResponseEntity.status(HttpStatus.OK).body(mCategoryService.queryCategoryListByPid(pid));
+ }
+```
+
+总结下来[ResponseEntity和@ResponseBody以及@ResponseStatus区别_roy的专栏](https://blog.csdn.net/deanwq/article/details/102907212)
+
+@ResponseBody一般与@Controller组合使用，用来返回JSON字符串：
+
+- @Controller
+- @ResponseBody
+
+而@ResponseStatus一般与RestController组合使用：
+
+- @RestController
+- @ResponseStatus
+
+
+
+ResponseEntity是一种泛型，返回的类型并非一定要是Json格式，可以使用任何类型响应主体。
+
+```java
+@Controller
+public class XXXController{
+ 
+    @GetMapping("/hello")
+    public ResponseEntity<String> hello() {
+       return new ResponseEntity<>("Hello World!", HttpStatus.OK);
+    }
+}
+```
+
+这里的“Hello World!"就是一个字符串返回。
+
+还可以设置Http的标头：
+
+```java 
+@GetMapping("/customHeader")
+public ResponseEntity<String> customHeader() {
+   HttpHeaders headers = new HttpHeaders();
+   headers.add("Custom-Header", "foo");
+ 
+   return new ResponseEntity<>("Custom header set", headers, HttpStatus.OK);
+}
+```
+
+甚至返回一个对象：
+
+```java
+@GetMapping("/hello")
+public ResponseEntity<String> hello() {
+    //返回是JSON字符串：[{"name": "jdon"}]
+    return new ResponseEntity<>(new User("jdon"), HttpStatus.OK);
+}
+```
+
+但是在一般情况下我们只是想返回一个带有数据的正常响应，那么只要使用@注解即可，在类级别使用@Controller标注情况下， @ResponseBody注解告诉返回的对象将自动序列化为JSON，并通过回控制器的HttpResponse对象。
+
+
+
+如果直接在类上面注解了@RestController，就不需要使用@ResponseBody了，可以直接返回对象，或者使用@ResponseStatus返回状态码。
+
+```java 
+@RestController
+public class XXXController{
+ 
+    @ResponseStatus(HttpStatus.FOUND)
+    public User postResponseController() {
+        return new User("Thanks For Posting!!!");
+    }
+}
+```
 
 
 
