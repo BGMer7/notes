@@ -2881,19 +2881,78 @@ String在Java中是一个不可修改的类，也就是说，这个类的实例�
 
 
 
+### StringBuilder & StringBuffer
 
+在使用StringBuffer类时，每次都会对StringBuffer对象本身进行操作，**而不是生成新的对象**，所以如果需要对字符串进行修改推荐使用StringBuffer。
 
+StringBuilder类在Java 5中被提出，它和StringBuffer之间的最大不同在于StringBuilder的方法不是线程安全的（不能同步访问）。
 
+由于StringBuilder相较于StringBuffer有速度优势，所以多数情况下建议使用StringBuilder类。
 
+```java
+public class RunoobTest{
+    public static void main(String args[]){
+        StringBuilder sb = new StringBuilder(10);
+        sb.append("Runoob..");
+        System.out.println(sb);  
+        sb.append("!");
+        System.out.println(sb); 
+        sb.insert(8, "Java");
+        System.out.println(sb); 
+        sb.delete(5,8);
+        System.out.println(sb);  
+    }
+}
+```
 
+<img src="https://www.runoob.com/wp-content/uploads/2013/12/2021-03-01-java-stringbuffer.svg" alt="img" style="zoom: 80%;" />
 
+[StringBuilder - 廖雪峰的官方网站 (liaoxuefeng.com)](https://www.liaoxuefeng.com/wiki/1252599548343744/1260471862687712)
 
+考察下面的循环代码：
 
+```
+String s = "";
+for (int i = 0; i < 1000; i++) {
+    s = s + "," + i;
+}
+```
 
+虽然可以直接拼接字符串，但是，在循环中，每次循环都会创建新的字符串对象，然后扔掉旧的字符串。这样，绝大部分字符串都是临时对象，不但浪费内存，还会影响GC效率。
 
+为了能高效拼接字符串，Java标准库提供了`StringBuilder`，它是一个可变对象，可以预分配缓冲区，这样，往`StringBuilder`中新增字符时，不会创建新的临时对象：
 
+```
+StringBuilder sb = new StringBuilder(1024);
+for (int i = 0; i < 1000; i++) {
+    sb.append(',');
+    sb.append(i);
+}
+String s = sb.toString();
+```
 
+`StringBuilder`还可以进行链式操作：
 
+```java
+public class Main {
+    public static void main(String[] args) {
+        var sb = new StringBuilder(1024);
+        sb.append("Mr ")
+          .append("Bob")
+          .append("!")
+          .insert(0, "Hello, ");
+        System.out.println(sb.toString());
+    }
+}
+```
+
+如果我们查看`StringBuilder`的源码，可以发现，进行链式操作的关键是，定义的`append()`方法会返回`this`，这样，就可以不断调用自身的其他方法。
+
+注意：对于普通的字符串`+`操作，并不需要我们将其改写为`StringBuilder`，因为Java编译器在编译时就自动把多个连续的`+`操作编码为`StringConcatFactory`的操作。在运行期，`StringConcatFactory`会自动把字符串连接操作优化为数组复制或者`StringBuilder`操作。
+
+你可能还听说过`StringBuffer`，这是Java早期的一个`StringBuilder`的线程安全版本，它通过同步来保证多个线程操作`StringBuffer`也是安全的，但是同步会带来执行速度的下降。
+
+`StringBuilder`和`StringBuffer`接口完全相同，现在完全没有必要使用`StringBuffer`。
 
 
 
@@ -4580,4 +4639,124 @@ resultMap 属性的结果映射不同。
 
 
 [Mybatis基本sql语法_jtkjtj的博客-CSDN博客_mybatis sql](https://blog.csdn.net/jtkjtj/article/details/80242936)
+
+
+
+## Tips
+
+### == & equals
+
+> 第一个区别在于双等号是二元比较运算符，equals是一个方法。作为运算符，双等号可以用于连接两个基本类型的变量（或字面量），也可以连接两个对象。相比之下，equals只能用来连接两个对象，一个作为调用方，一个作为参数。
+>
+> 第二个区别在于比较方式不同。
+
+
+
+对于基本类型，双等号用于比较二者的值是否相等，
+
+```java
+int a=1;
+int b=2;
+System.out.println(a==b) // false
+```
+
+对于引用变量，双等号用于比较是否指向同一个对象，
+
+```java 
+Student john = new Student("John", 25);
+Student mary = new Student("Mary", 25);
+System.out.println(john==mary); // false
+```
+
+
+
+equals方法不能用于比较基本类型数据。
+
+```java 
+public boolean equals(Object obj) {
+    return (this == obj);
+}
+```
+
+这里没有考虑对象为null的情况，如果调用的对象为null，将引发空指针异常。
+
+因为很多我们常用的类都重写了equals方法，比如String。换句话说，只有重写了equals方法的类，比较双等号和equals才有意义。
+ 接下来，我们就看一下几种特殊的类中双等号和equals都是如何表现的。
+
+**String**
+
+比较两个字符串的内容是否相等时，应该使用equals方法，因为String类对equals方法进行了重写。
+
+**字符串的equals比较的是这两个字符串的内容是否相等。**
+
+
+
+除了equals之外，有时候不完全只需要比较字符串是否内容相等，还需要对比是否对象相等，这时候就需要双等号比较。
+
+```java
+String a = "abc";
+String b = "abc";
+String c = new String("abc");
+String d = new StringBuilder("abc").toString();
+String e = new String("abc").intern();
+String f = "ab" + "c";
+String g = new String("ab") + new String("c");
+
+System.out.println(a == b); // true
+System.out.println(a == c); // false
+System.out.println(a == d); // false
+System.out.println(a == e); // true
+System.out.println(a == f); // true
+System.out.println(a == g); // false
+```
+
+1. a==b
+
+   这里就要引入字符串常量池的概念了。为了提高效率，java在使用字符串的时候并不会每次都生成一个新的字符串，而是在内存中分配一块区域作为常量池，遇到字符串的变量时，优先到常量池中找是否有相同的字符串，如果有的话，直接复用当前的字符串，如果没有的话，再创建新的字符串对象。因此，实际上a和b指向的是同一个内存对象。
+
+2. a!=c
+
+   那么a和c的比较结果为什么又是false呢？因为变量c显式地调用了String的构造池，这时字符串将无视常量池中是否有相同的变量，强制重新创建一个字符串，创建的字符串也不会加入常量池中。因此，a和c指向的不是同一个对象。
+
+3. a!=d
+
+   我们再来看a和d的比较结果。d中使用了StringBuilder，字符串字面量"abc"作为StringBuilder的参数，按理说不会创建新的字符串呀。问题出在后面的toString()方法上，想要把StringBuilder转换为String对象，就需要调用toString()方法。通过查看toString()方法的源码，我们发现在该方法中调用了String的构造器，因此和c一样，重新创建了字符串的对象。
+
+4. a==e
+
+   a和e的比较结果比较有意思。e明明调用了String的构造器，为什么比较结果为true呢？关键在于后面的intern()方法，这个方法大家可能不太熟悉，它的作用就是判断常量池中有没有对应的字符串，如果有的话，直接复用该字符串，如果没有的话，创建字符串并加入常量池中。也就是说，调用了intern()方法之后，效果和直接使用字面量是相同的。事实上，按照官方文档的说法，字符串字面量和字符串常量都属于被intern的字符串。调用intern()方法之后，a和e指向了同一个字符串对象。
+
+5. a==f/a!=g
+
+   a与f和g的比较结果我们一起看。先说a和f，变量f创建字符串时，使用了字符串拼接。java在编译过程中，如果发现能够计算的结果，会在编译期直接将结果计算出来。也就是说，编译结束后，f变量也是字符串"abc"这一字面量了。a和f完全相同，根据上述常量池的原理，a和f指向同一对象。再来看g，变量g使用String的构造器进行字符串拼接，由于需要创建对象，在编译期编译器无法对该结果进行求值，因此g只能等待运行期创建两个字符串对象，再进行拼接，二者不会指向同一个对象。
+
+
+
+**重写equals和hashcode**
+
+```java
+@Override
+public boolean equals(Object o) {
+    if (this == o) {
+        return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+        return false;
+    }
+    Student student = (Student) o;
+    return age == student.age &&
+        Objects.equals(name, student.name);
+}
+
+@Override
+public int hashCode() {
+    return Objects.hash(name, age);
+}
+```
+
+
+
+
+
+
 
