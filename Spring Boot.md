@@ -652,3 +652,47 @@ public class XXXController{
 
 ## theory
 
+
+
+
+
+
+
+## rules
+
+
+
+
+
+
+
+
+
+
+
+
+
+## tips
+
+### 一键导入Maven库
+
+
+
+
+
+
+
+## 打包部署
+
+[SpringBoot 打包部署最佳实践 - 云+社区 - 腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1884117)
+
+修改端口
+
+
+
+部署运行
+
+```shell
+java -jar demo-0.0.1-SNAPSHOT.jar > log_gatsby_demo.out 2>&1
+```
+

@@ -472,3 +472,161 @@ export default [
 
 
 
+
+
+# H5
+
+## fetch ajax & axios
+
+[有同学问我：Fetch 和 Ajax 有什么区别？ - 掘金 (juejin.cn)](https://juejin.cn/post/6997784981816737800)
+
+### ajax
+
+英文全称为 `Asynchronous JavaScript + XML` ，翻译过来就是**异步JavaScript和XML**。
+
+它是用来描述一种使用现有技术集合的“新”方法的，这里的“新”方法主要涉及到:  HTML 或 XHTML、CSS、 JavaScript、DOM、XML、XSLT，以及最重要的 XMLHttpRequest。
+
+当使用结合了这些技术的 AJAX 模型以后， 网页应用能够快速地将增量更新呈现在用户界面上，而不需要重载（刷新）整个页面。这使得程序能够更快地回应用户的操作。
+
+> Ajax 是一个**概念模型**，是一个囊括了众多现有技术的**集合**，并不具体代指某项技术。
+
+Ajax 最重要的特性就是可以**局部刷新页面**。
+
+
+
+### axios
+
+Axios 是一个基于 Promise 网络请求库，作用于 Node.js 和浏览器中。 它是 isomorphic 的(即同一套代码可以运行在浏览器和 Node.js中)。在服务端它使用原生 Node.js http 模块，而在客户端则使用 XMLHttpRequest。
+
+这里我们只关注客户端的 Axios，它是基于 XHR 进行二次封装形成的工具库。
+
+客户端 Axios 的主要特性有：
+
+- 从浏览器创建 XMLHttpRequests
+- 支持 Promise API
+- 拦截请求和响应
+- 转换请求和响应数据
+- 取消请求
+- 自动转换JSON数据
+- 客户端支持防御XSRF
+
+
+
+### fetch
+
+Fetch提供了一个获取资源的接口（包括跨域请求）。
+
+Fetch是一个现代的概念, 等同于 XMLHttpRequest。它提供了许多与 XMLHttpRequest 相同的功能，但被设计成**更具可扩展性和高效性**。
+
+Fetch 的核心在于**对 HTTP 接口的抽象**，包括 Request、Response、Headers 和 Body，以及用于初始化异步请求的 `global fetch`。得益于 JavaScript 实现的这些抽象好的 HTTP 模块，其他接口能够很方便的使用这些功能。
+
+除此之外，Fetch 还利用到了请求的异步特性——它是基于 Promise 的。
+
+`fetch() ` 方法必须接受一个参数——资源的路径。无论请求成功与否，它都返回一个 Promise 对象，resolve 对应请求的 Response。
+
+
+
+```javascript
+function consoleSetInterval() {
+  setInterval(showData, 10000); // 每隔5s在控制台输出一次时间
+  const data = { number: 100 }; 
+
+  fetch("http://127.0.0.1:8080/number/isEvenOdd", {
+    method: "POST", // or 'PUT'
+    headers: {
+      // "Content-Type": "form-data",
+      "Access-Control-Allow-Origin": "*",
+      "access-control-allow-headers": "Origin",
+      "Access-Control-Allow-Credentials": true,
+      "Content-Type": "application/json",
+    },
+    mode: "cors",
+    body: data,
+  }).then((response) => response.json());
+  // $.ajax({
+  //   type: "GET",
+  //   url: "http://10.189.66.196:8080/menu/tree",
+  //   data: JSON.stringify({
+      
+  //   }),
+  //   success: (res) => {
+      
+  //   },
+  //   contentType: "application/json",
+  //   dataType: "json",
+  // });
+}
+```
+
+
+
+## preflight
+
+
+
+
+
+
+
+
+
+
+
+## proxy and CORS
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
