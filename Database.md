@@ -524,17 +524,145 @@ CAS的缺点：
 
 
 
+### Linux(CentOS 7)安装MySQL
+
+[centos7系统安装mysql8.0完整步骤 - 云+社区 - 腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1849475)
+
+1. 解压安装包
+
+   ```shell
+   tar -xvf mysql-8.0.26-1.el7.x86_64.rpm-bundle.tar
+   ```
+
+2. 安装顺序：common->lib->lib-compat->client->server
+
+   ```shell
+   rpm -ivh mysql-community-common-8.0.26-1.el7.x86_64.rpm --nodeps --force
+   rpm -ivh mysql-community-libs-8.0.26-1.el7.x86_64.rpm --nodeps --force
+   rpm -ivh mysql-community-client-8.0.26-1.el7.x86_64.rpm --nodeps --force
+   rpm -ivh mysql-community-server-8.0.26-1.el7.x86_64.rpm --nodeps --force
+   ```
+
+3. 通过 rpm -qa | grep mysql 命令查看 mysql 的安装包
+
+4. 初始化MySQL
+
+   ```shell
+   mysqld --initialize;
+   chown mysql:mysql /var/lib/mysql -R;
+   systemctl start mysqld.service;
+   systemctl enable mysqld;
+   ```
+
+5. 查看数据库默认的随机密码
+
+   ```shell
+   cat /var/log/mysqld.log | grep password
+   ```
+
+   将默认的密码记录下来
+
+6. 登录MySQL
+
+   ```shell
+   mysql -uroot -p
+   ```
+
+   输入刚刚查到的密码，进行数据库的登陆，复制粘贴就行，MySQL 的登陆密码也是不显示的
+
+7. 修改登录密码
+
+   ```sql
+   ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '新的密码';
+   ```
+
+8. 退出MySQL
+
+9. 授权远程访问
+
+   ```sql 
+   create user 'root'@'%' identified with mysql_native_password by 'root';
+   grant all privileges on *.* to 'root'@'%' with grant option;
+   flush privileges;
+   ```
+
+10. 修改加密规则
+
+    ```sql
+    ALTER USER 'root'@'localhost' IDENTIFIED BY 'root' PASSWORD EXPIRE NEVER;
+    ```
+
+11. 刷新权限
+
+    ```sql
+    flush privileges;
+    ```
+
+    
+
+### MySQL设置大小写不敏感
+
+[mysql 设置大小写不敏感_Hehuyi_In的博客-CSDN博客_mysql设置大小写不敏感](https://blog.csdn.net/Hehuyi_In/article/details/95354014)
+
+
+
+### MySQL修改密码
+
+[Linux下Mysql-8.0修改密码 - 暖影子 - 博客园 (cnblogs.com)](https://www.cnblogs.com/nuanyingzi/p/13432465.html)
+
+**Linux下mysql升级到8.0版本了，以往mysql5.7设置密码的方法已经失效。此处提供的是8.0之后的版本。**
+
+
+
+假设仍然记得原始密码，并且已经登录进入MySQL。
+
+1. 先将原先的密码清空
+
+   ```SQL
+   update user set authentication_string='' where  user = 'root';
+   ```
+
+2. 修改密码
+
+   ```sql
+   ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '你的密码'; 
+   ```
+
+3. 刷新权限
+
+   ```sql
+   FLUSH privileges;
+   ```
+
+   
+
+假设忘记了登录密码，无法登录进入MySQL，需要先在启动项中添加skip-grant-tables。
 
 
 
 
 
+### MySQL设置密码永不过期
 
+[MySQL 密码过期的修改方法 | 小决的专栏 (jueee.github.io)](https://jueee.github.io/2021/07/2021-07-23-MySQL密码过期的修改方法/)
 
+```mysql
+mysql> set global default_password_lifetime=0;
+```
 
+```shell
+vim /etc/my.cnf
 
+[mysqld]
+default_password_lifetime=0
+```
 
-
-
-
-
+```mysql
+mysql> show global variables like 'default_password_lifetime';
++---------------------------+-------+
+| Variable_name             | Value |
++---------------------------+-------+
+| default_password_lifetime | 0     |
++---------------------------+-------+
+1 row in set (0.01 sec)
+```
