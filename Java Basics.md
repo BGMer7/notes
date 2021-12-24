@@ -4756,7 +4756,222 @@ public int hashCode() {
 
 
 
+### 字符串哈希
+
+为什么选31作为Hash的乘子？
+
+Java源码中String的hashCode方法：
+
+```java 
+public int hashCode() {
+    int h = hash;
+    if (h == 0 && value.lenght > 0) {
+        char val[] = value;
+        
+        for (int i = 0; i < value.length; ++i) {
+            h = 31 * h + val[i];
+        }
+        hash = h;
+    }
+    return h;
+}
+```
+
+这里说明一下，上面的 s 数组即源码中的 val 数组，是 String 内部维护的一个 char 类型数组。这里我来简单推导一下这个公式：
+
+```txt
+假设 n=3
+i=0 -> h = 31 * 0 + val[0]
+i=1 -> h = 31 * (31 * 0 + val[0]) + val[1]
+i=2 -> h = 31 * (31 * (31 * 0 + val[0]) + val[1]) + val[2]
+       h = 31*31*31*0 + 31*31*val[0] + 31*val[1] + val[2]
+       h = 31^(n-1)*val[0] + 31^(n-2)*val[1] + val[2]
+```
+
+从网上的资料来看，31作为乘子有两个理由：
+
+1. 31是个不大不小的质数。
+2. 31可以被JVM优化，`31 * i = (i << 5) - i`。
+
+> **为什么Hash要选质数作为乘子？Why Hash picks prime numbers as multipliers**
+>
+> 1. 众所周知，Hash是算出来的，而不是比出来的。
+>
+>    在顺序结构以及平衡树中，元素的Key和其存储位置没有固定的规律对应关系。因此在查找一个元素的时候，必须要经过多次比较。凡是存在比较，就可能出现O(n)的时间复杂度。
+>
+>    所以理想的搜索方法是，不通过比较，一次性直接从表中获得想要的元素。通过某种函数可以直接将元素的Key和存储位置对应起来，在查找的时候就可以一次性定位到元素的位置，取出value。
+>
+>    以上方法即为Hash，能够将key对应上存储的函数叫做Hash函数，构造出来的结构叫做Hash表。
+>
+> 2. Hash冲突
+>
+>    一个Hash涉及到Capacity，这个Capacity可以理解为桶排序里的桶，如果一个萝卜一个坑，那么总元素就不能超过这个Capacity，否则就会出现两个萝卜占用同一个坑，就出现了Hash冲突。假设Capacitity为10，Hash算法为对Capacity取模，那么4和14的hash码就是一样的，都对应到4，出现了两个不同的Key却对应到同一个存储位置的情况。14和4这样的情况被称为同义词。
+>
+>    因此判断一个Hash函数的好坏，主要就从以下几个角度：
+>
+>    1. Hash值是否分布均匀，呈现出随机性，有利于Hash表的空间利用率提升，增加hash的破解难度；
+>    2. 哈希碰撞的概率很低，碰撞概率应该控制在一定范围；
+>    3. 是否计算得更快，一个哈希函数计算时间越短效率越高。
+>
+>    计算hash冲突的理论值和实际值见[如何判断一个哈希函数的好坏 - SegmentFault 思否](https://segmentfault.com/a/1190000040928322)
+>
+> 3. 为什么取质数？（数学原理）
+>
+>    StackOverFlow上给出的一个回答--[java - Why use a prime number in hashCode? - Stack Overflow](https://stackoverflow.com/questions/3613102/why-use-a-prime-number-in-hashcode)
+>
+>    ```
+>    Prime numbers are chosen to best distribute data among hash buckets.  
+>    If the distribution of inputs is random and evenly spread, then the  choice of the hash code/modulus does not matter. It only has an impact  when there is a certain pattern to the inputs.
+>    
+>    This is often the case when dealing with memory locations. 
+>    For  example, all 32-bit integers are aligned to addresses divisible by 4.  
+>    Check out the table below to visualize the effects of using a prime vs.  non-prime modulus:
+>    ```
+>
+>    ```java
+>    Input       Modulo 8    Modulo 7
+>    0           0           0
+>    4           4           4
+>    8           0           1
+>    12          4           5
+>    16          0           2
+>    20          4           6
+>    24          0           3
+>    28          4           0
+>    ```
+>
+>    Notice the almost-perfect distribution when using a prime modulus vs. a non-prime modulus.
+>
+>    However, although the above example is largely contrived, the general principle is that  when dealing with a *pattern of inputs*, using a prime number modulus will yield the best distribution.
+>
+>    针对31这个数字有一个更好的解释：
+>
+>    Because you want the number you are multiplying by and the number of  buckets you are inserting into to have orthogonal prime factorizations.
+>
+>    Suppose there are 8 buckets to insert into. If the number you are  using to multiply by is some multiple of 8, then the bucket inserted  into will only be determined by the least significant entry (the one not multiplied at all). Similar entries will collide. Not good for a hash  function.
+>
+>    31 is a large enough prime that the number of buckets is unlikely to  be divisible by it (and in fact, modern java HashMap implementations  keep the number of buckets to a power of 2).
+
+[科普：为什么 String hashCode 方法选择数字31作为乘子 - SegmentFault 思否](https://segmentfault.com/a/1190000010799123)
 
 
 
+那么针对[【字符串哈希】字符串哈希入门 (qq.com)](https://mp.weixin.qq.com/s?__biz=MzU4NDE3MTEyMA==&mid=2247489813&idx=1&sn=7f3bc18ca390d85b17655f7164d8e660&chksm=fd9cb20acaeb3b1cc78abf05d6fea6d093098998ce877f799ac478247604bd267fbee6fcd989&token=1342991619&lang=zh_CN#rd)
+
+[【宫水三叶】一题双解 :「字符串哈希 + 二分」&「后缀数组」 - 最长重复子串 - 力扣（LeetCode） (leetcode-cn.com)](https://leetcode-cn.com/problems/longest-duplicate-substring/solution/gong-shui-san-xie-zi-fu-chuan-ha-xi-ying-hae9/)的题解
+
+一开始没有理解h和p两个数组的含义，实际上回到
+
+```java
+假设 n=3
+i=0 -> h = 31 * 0 + val[0]
+i=1 -> h = 31 * (31 * 0 + val[0]) + val[1]
+i=2 -> h = 31 * (31 * (31 * 0 + val[0]) + val[1]) + val[2]
+       h = 31*31*31*0 + 31*31*val[0] + 31*val[1] + val[2]
+       h = 31^(n-1)*val[0] + 31^(n-2)*val[1] + val[2]
+```
+
+就可以理解。就把Hash函数当作一个多项式，不完全也不严谨的推导如下：
+
+![2e0716ceba8d061a876d215b48b5cfd](C:\Users\Caijinyang\Desktop\2e0716ceba8d061a876d215b48b5cfd.png)
+
+因此三叶叫p是次方数组。
+
+一开始也只是我自己的想法，但是我就结合着题目自己试了一下：
+
+```java
+public class _187RepeatedDNASequences {
+    private int n = 0;
+    int N = (int) 1e5 + 10, P = 131313;
+    int[] h = new int[N], p = new int[N];
+
+    public List<String> findRepeatedDnaSequencesWithHash(@NotNull String s) {
+        int n = s.length();
+        List<String> ans = new ArrayList<>();
+        p[0] = 1;
+        for (int i = 1; i <= n; i++) {
+            h[i] = h[i - 1] * P + s.charAt(i - 1);
+            p[i] = p[i - 1] * P;
+        }
+        for (int i: p) 
+            System.out.println(i)
+        
+        Map<Integer, Integer> map = new HashMap<>();
+        for (int i = 1; i + 10 - 1 <= n; i++) {
+            int j = i + 10 - 1;
+            int hash = h[j] - h[i - 1] * p[j - i + 1];
+            int cnt = map.getOrDefault(hash, 0);
+            if (cnt == 1) ans.add(s.substring(i - 1, i + 10 - 1));
+            map.put(hash, cnt + 1);
+        }
+        return ans;
+    }
+
+    public int getN() {
+        return this.N;
+    }
+
+    public int getP() {
+        return this.P;
+    }
+
+    public static void main(String[] args) {
+        _187RepeatedDNASequences solution = new _187RepeatedDNASequences();
+        System.out.println(solution.findRepeatedDnaSequencesWithHash("AAAAAAAAAAAA"));
+        System.out.println(solution.getN());
+        
+    }
+}
+```
+
+程序运行之前我仍然很疑惑，131313的二次方三次方一直次方下去不会int溢出吗？我就采用P=131作为乘子：
+
+```java
+1
+131
+17161
+2248091
+294499921
+-75216013
+-1263363111
+2003157003
+420562337
+-740908701
+1725207977
+-1631021701
+1084521969
+```
+
+结果就是他确实会溢出的。
+
+```java
+class Solution {
+    private int n = 0;
+    int N = (int) 1e5 + 10, P = 131;
+    int[] h = new int[N], p = new int[N];
+    public List<String> findRepeatedDnaSequences(String s) {
+        int n = s.length();
+        List<String> ans = new ArrayList<>();
+        p[0] = 1;
+        for (int i = 1; i <= n; i++) {
+            h[i] = h[i - 1] * P + s.charAt(i - 1);
+            p[i] = p[i - 1] * P;
+        }
+        
+        Map<Integer, Integer> map = new HashMap<>();
+        for (int i = 1; i + 10 - 1 <= n; i++) {
+            int j = i + 10 - 1;
+            int hash = h[j] - h[i - 1] * p[j - i + 1];
+            int cnt = map.getOrDefault(hash, 0);
+            if (cnt == 1) ans.add(s.substring(i - 1, i + 10 - 1));
+            map.put(hash, cnt + 1);
+        }
+        return ans;
+    }
+}
+```
+
+<img src="C:\Users\Caijinyang\AppData\Roaming\Typora\typora-user-images\image-20211224184103017.png" alt="image-20211224184103017" style="zoom: 67%;" />
+
+Capacity选取131过不了第30个case，选取131313可以通过。
 
