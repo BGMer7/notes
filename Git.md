@@ -182,13 +182,26 @@ commit-id 在版本回退的时候是非常有用的，它相当于一个快照�
 
 
 
+## git merge
 
+git merge用于将两个或者两个以上的开发历史合并到一起。
+
+```shell
+git merge [-n] [--stat] [--no-commit] [--squash] [--[no-]edit]
+    [-s <strategy>] [-X <strategy-option>] [-S[<keyid>]]
+    [--[no-]allow-unrelated-histories]
+    [--[no-]rerere-autoupdate] [-m <msg>] [<commit>…​]
+git merge --abort
+git merge --continue
+```
 
 
 
 ## git pull 
 
+git pull = git fetch + git merge
 
+git pull --rebase = git fetch + git rebase
 
 
 
@@ -201,6 +214,20 @@ commit-id 在版本回退的时候是非常有用的，它相当于一个快照�
 
 
 
+
+## git rebase
+
+[闲谈 git merge 与 git rebase 的区别 - SegmentFault 思否](https://segmentfault.com/a/1190000005013964)
+
+rebase总是只有一条分支，在最新的该分支的最新版本后面合并新的提交。
+
+merge会保留版本信息。
+
+综上：
+
+- merge结果可以保留时间线，但是rebase会打乱时间线。
+- 但是rebase看起来更加简洁，merge看起来比较杂乱。
+- 最终结果都将代码的版本合并了。
 
 
 
