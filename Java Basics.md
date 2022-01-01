@@ -2956,6 +2956,131 @@ public class Main {
 
 
 
+## Generic
+
+泛型，即参数化类型，顾名思义，就是将类型由原来的具体的类型参数化，类似于方法中的变量参数，此时类型也定义成参数形式（可以称之为类型形参），然后在使用/调用时传入具体的类型（类型实参）。
+
+泛型的本质是为了参数化类型（在不创建新的类型的情况下，通过泛型指定的不同类型来控制形参具体限制的类型）。也就是说在泛型使用过程中，操作的数据类型被指定为一个参数，这种参数类型可以用在类、接口和方法中，分别被称为泛型类、泛型接口、泛型方法。
+
+
+
+```java 
+List arrayList = new ArrayList();
+arrayList.add("aaaa");
+arrayList.add(100);
+
+for(int i = 0; i< arrayList.size();i++){
+    String item = (String)arrayList.get(i);
+    Log.d("泛型测试","item = " + item);
+} // 程序崩溃
+```
+
+
+
+```java 
+List<String> stringArrayList = new ArrayList<String>();
+List<Integer> integerArrayList = new ArrayList<Integer>();
+
+Class classStringArrayList = stringArrayList.getClass();
+Class classIntegerArrayList = integerArrayList.getClass();
+
+if(classStringArrayList.equals(classIntegerArrayList)){
+    Log.d("泛型测试","类型相同");
+} // 泛型测试，类型相同
+```
+
+通过上面的例子可以证明，在编译之后程序会采取去泛型化的措施。也就是说Java中的泛型，只在编译阶段有效。在编译过程中，正确检验泛型结果后，会将泛型的相关信息擦出，并且在对象进入和离开方法的边界处添加类型检查和类型转换的方法。也就是说，泛型信息不会进入到运行时阶段。
+
+对此总结成一句话：泛型类型在逻辑上看以看成是多个不同的类型，实际上都是相同的基本类型。
+
+### generic class
+
+```java 
+public class Pair<T> {
+    private T first;
+    private T second;
+
+    public Pair() {
+        first = null;
+        second = null;
+    }
+
+    public Pair(T first, T second) {
+        this.first = first;
+        this.second = second;
+    }
+
+    public T getFirst() {
+        return this.first;
+    }
+
+    public T getSecond() {
+        return this.second;
+    }
+
+    public void setFirst(T newValue) {
+        this.first = newValue;
+    }
+
+    public void setSecond(T newValue) {
+        this.second = newValue;
+    }
+}
+```
+
+PairTest.java
+
+```java 
+class ArrayAlg {
+    public static Pair<String> sort(String[] a) {
+        if (a == null || a.length == 0) return null;
+
+        String min = a[0];
+        String max = a[0];
+
+        for (int i = 1; i < a.length; ++i) {
+            if (min.compareTo(a[i]) > 0) min = a[i];
+            if (max.compareTo(a[i]) < 0) max = a[i];
+        }
+        return new Pair<>(min, max);
+    }
+}
+
+public class PairTest {
+    public static void main(String[] args) {
+        String[] words = {
+                "mary", "had", "a", "little", "lamb"
+        };
+
+        Pair<String> mm = ArrayAlg.sort(words);
+        System.out.println("min = " + mm.getFirst());
+        System.out.println("max = " + mm.getSecond());
+    }
+}
+```
+
+
+
+### generic method
+
+```java
+class ArrayAlg {
+    public static <T> T getMiddle(T...a) {
+        return a[a.length/2];
+    }
+}
+```
+
+
+
+
+
+
+
+
+
+
+
 
 
 
