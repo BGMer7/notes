@@ -231,6 +231,112 @@ merge会保留版本信息。
 
 
 
+
+
+## git stash
+
+[git-stash用法小结 - Tocy - 博客园 (cnblogs.com)](https://www.cnblogs.com/tocy/p/git-stash-reference.html)
+
+git stash适用的几种情形：
+
+1. 有一个类是多余的，想要删除它但是又担心以后需要以后查看他的代码，想要保存又不想增加一个脏的提交。
+2. 在当前的开发分支上有很多修改记录，但是现在需要切换到另外的分支，之后再改回来当前的分支。使用git stash就可以将本地的修改推入Git栈中，这时候的工作区间和上一次是完全相同的，切换回当前目录之后再使用`git stash apply`将以前的工作切换回来。
+
+
+
+**stash当前的修改**
+
+git stash会将所有未提交的修改（包括暂存的非暂存的）都保存起来，用来恢复以后的工作目录。git stash是本地的，不会提交到git服务器。
+
+实际应用中，使用`git stash save 'initial stash'`给git stash加一个message用于版本记录，
+
+```shell
+$ git status
+On branch master
+Changes to be committed:
+
+new file:   style.css
+
+Changes not staged for commit:
+
+modified:   index.html
+
+$ git stash
+Saved working directory and index state WIP on master: 5002d47 our new homepage
+HEAD is now at 5002d47 our new homepage
+
+$ git status
+On branch master
+nothing to commit, working tree clean
+```
+
+
+
+**重新应用缓存的stash**
+
+可以使用`git stash pop`恢复之前的工作目录，这个指令将缓存堆栈中的第一个stash删除，并将对应修改应用到当前的工作目录下。
+
+```shell
+$ git status
+On branch master
+nothing to commit, working tree clean
+$ git stash pop
+On branch master
+Changes to be committed:
+
+    new file:   style.css
+
+Changes not staged for commit:
+
+    modified:   index.html
+
+Dropped refs/stash@{0} (32b3aa1d185dfe6d57b3c3cc3b32cbf3e380cc6a)
+```
+
+或者使用`git stash apply`
+
+```shell
+$ git stash apply
+On branch master
+Changes to be committed:
+
+    new file:   style.css
+
+Changes not staged for commit:
+
+    modified:   index.html
+```
+
+
+
+**查看现有的stash**
+
+```shell
+$ git stash list
+stash@{0}: WIP on master: 049d078 added the index file
+stash@{1}: WIP on master: c264051 Revert "added file_size"
+stash@{2}: WIP on master: 21d80a5 added number to log
+```
+
+
+
+**移除现有的stash**
+
+```shell
+$ git stash list
+stash@{0}: WIP on master: 049d078 added the index file
+stash@{1}: WIP on master: c264051 Revert "added file_size"
+stash@{2}: WIP on master: 21d80a5 added number to log
+$ git stash drop stash@{0}
+Dropped stash@{0} (364e91f3f268f0900bc3ee613f9f733e82aaed43)
+```
+
+或者可以使用`git stash clear`可以清除所有的stash。
+
+
+
+
+
 ## # git dir
 
 **工作区（Working Directory）** 
