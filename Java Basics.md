@@ -4502,6 +4502,205 @@ System.out.println(ary.get(0));
 
 
 
+
+
+## Garbage Collection
+
+垃圾回收（Garbage Collection，GC），顾名思义就是释放垃圾占用的空间，防止内存泄露。有效的使用可以使用的内存，对内存堆中已经死亡的或者长时间没有使用的对象进行清除和回收。
+
+[咱们从头到尾说一次 Java 垃圾回收 ](https://zhuanlan.zhihu.com/p/73628158)
+
+### Reachability Counting
+
+引用计数算法（RC）是通过在对象头中分配一个空间来保存该对象被引用的次数（Reference Count）。
+
+如果该对象被其它对象引用，则它的引用计数加1，如果删除对该对象的引用，那么它的引用计数就减1，当该对象的引用计数为0时，那么该对象就会被回收。
+
+`String m = new String("Jack");`S
+
+先创建一个字符串，这时候"jack"有一个引用，就是 m。
+
+此时如果设置``m = null`，那么Jack的引用就变成了0，意味着这个空间可以被回收了。
+
+**引用计数算法的优点**：
+
+1. 实现简单,垃圾对象便于辨识;判定效率高,回收没有延迟性。
+
+**引用计数算法的缺点**：
+
+1. 它需要单独的字段存储计数器,这样的做法增加了`存储空间的开销`。
+2. 每次复制都需要更新计数器,伴随着加法和减法操作,这增加了`时间开销`。
+3. 引用计数器有一个严重的问题,即`无法处理循环引用`的情况。这是一条致命缺陷,导致在Java的垃圾回收器中没有使用这类算法。
+
+主要的原因是因为Java会存在循环引用的问题，引用计数没有办法排除这种问题。
+
+
+
+### Reachability Analysis
+
+可达性分析算法（Reachability Analysis）的基本思路是，通过一些被称为引用链（GC Roots）的对象作为起点，从这些节点开始向下搜索，搜索走过的路径被称为（Reference Chain)，当一个对象到 GC Roots 没有任何引用链相连时（即从 GC Roots 节点到该节点不可达），则证明该对象是不可用的。
+
+
+
+### GC root
+
+在Java中，可以作为GC root的对象有四种类型
+
+1. 虚拟机栈（栈帧中的本地变量表）中引用的对象
+
+   ```java
+   public class StackLocalParameter {
+   	public StackLocalParameter(String name){
+           
+       }
+   }
+   
+   public static void testGC(){
+   	StackLocalParameter s = new StackLocalParameter("localParameter");
+   	s = null;
+   }
+   ```
+
+   此时的s即为GC root，当s设为null之后，GC root和StackLocalParameter的引用链被切断，将被JVM回收。
+
+2. 方法区中类静态属性引用的对象
+
+   s为GC Root，s置为null，经过GC后，s所指向的properties对象由于无法与GC Root建立关系被回收。
+
+   而m作为类的静态属性，也属于GC Root，parameter对象依然与GC root建立着连接，所以此时parameter对象并不会被回收。
+
+   ```java 
+   public class MethodAreaStaicProperties {
+   	public static MethodAreaStaicProperties m;
+   	public MethodAreaStaicProperties(String name){
+           
+       }
+   }
+   
+   public static void testGC(){
+   	MethodAreaStaicProperties s = new MethodAreaStaicProperties("properties");
+   	s.m = new MethodAreaStaicProperties("parameter");
+   	s = null;
+   }
+   
+   ```
+
+3. 方法区常量引用的对象
+
+   m即为方法区中的常量引用，也为GC Root，s置为 null后，final对象也不会因没有与GC Root建立联系而被回收。
+
+   ```java
+   public class MethodAreaStaicProperties {
+   	public static final MethodAreaStaicProperties m = MethodAreaStaicProperties("final");
+   	public MethodAreaStaicProperties(String name){
+           
+       }
+   }
+   
+   public static void testGC(){
+   	MethodAreaStaicProperties s = new MethodAreaStaicProperties("staticProperties");
+   	s = null;
+   }
+   ```
+
+4. 本地方法栈中JNI（即一般说的Native方法）引用的对象
+
+   任何 native 接口都会使用某种本地方法栈，实现的本地方法接口是使用 C 连接模型的话，那么它的本地方法栈就是 C 栈。当线程调用 Java 方法时，虚拟机会创建一个新的栈帧并压入 Java 栈。然而当它调用的是本地方法时，[虚拟机](https://www.zhihu.com/search?q=虚拟机&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra={"sourceType"%3A"article"%2C"sourceId"%3A"73628158"})会保持 Java 栈不变，不再在线程的 Java 栈中压入新的帧，虚拟机只是简单地动态连接并直接调用指定的本地方法。
+
+
+
+### GC algorithms
+
+1. 标记-清除算法（Mark-Swap）是最基础的一种垃圾回收算法，分为两部分，先将内存中的可回收的对象进行标记，然后将这些垃圾拎出来清理掉，就像上图一样，清理掉的垃圾就变成未使用的内存区域，等待被再次使用。
+
+   但是标记-清除算法会存在一个问题就在于，内存会被切割为很多小块，碎片化的内存是没有办法使用的。
+
+2. 复制算法（Copying）是在标记清除算法上演化而来，能够保证碎片化内存的问题可以得到解决，内存可以变成整段连续的。
+
+​		但是问题也很明显，为了照顾需要复制的内存，必须要预留一大块内存，因此可以利用的内存实际上大约就只有总内存的一半左右。
+
+3. 标记整理算法（Mark-Compact）标记过程仍然与标记-清除算法一样，但后续步骤不是直接对可回收对象进行清理，而是让所有存活的对象都向一端移动，再清理掉端边界以外的内存区域。
+
+   标记整理算法一方面在标记-清除算法上做了升级，解决了内存碎片的问题，也规避了复制算法只能利用一半内存区域的弊端。但是它对内存变动更频繁，需要整理所有存活对象的引用地址，在效率上比复制算法要差很多。
+
+分代收集算法分代收集算法（Generational Collection）严格来说并不是一种思想或理论，而是融合上述3种基础的算法思想，而产生的针对不同情况所采用不同算法的一套组合拳。对象存活周期的不同将内存划分为几块。
+
+**一般是把 Java 堆分为新生代和老年代，这样就可以根据各个年代的特点采用最适当的收集算法。**在新生代中，每次垃圾收集时都发现有大批对象死去，只有少量存活，那就选用复制算法，只需要付出少量存活对象的复制成本就可以完成收集。而老年代中因为对象存活率高、没有额外空间对它进行分配担保，就必须使用标记-清理或者标记 --- 整理算法来进行回收。
+
+![img](https://pic4.zhimg.com/v2-2dcba4d81807c67df8309aa181bb00c3_b.jpg)
+
+堆空间 = 新生代(1/3)+老年代(2/3)
+
+新生代 = eden(8/10) + From(1/10) + To(1/10)
+
+>Java 堆（Java Heap）是JVM所管理的内存中最大的一块，堆又是GC管理的主要区域，主要分析一下 Java 堆的结构。
+>
+>Java 堆主要分为2个区域-年轻代与老年代，其中年轻代又分 Eden 区和 Survivor 区，其中 Survivor 区又分 From 和 To 2个区。可能这时候大家会有疑问，为什么需要 Survivor 区，为什么Survivor 还要分2个区。
+
+
+
+**Eden区**
+
+大多数情况下，对象会在新生代 Eden 区中进行分配，当 Eden 区没有足够空间进行分配时，虚拟机会发起一次 Minor GC，Minor GC 相比 Major GC 更频繁，回收速度也更快。
+
+通过 Minor GC 之后，Eden 会被清空，Eden 区中绝大部分对象会被回收，而那些无需回收的存活对象，将会进到 Survivor 的 From 区（若 From 区不够，则直接进入 Old 区）。
+
+
+
+**Survivor区**
+
+Survivor 区相当于是 Eden 区和 Old 区的一个缓冲，类似于我们交通灯中的黄灯。Survivor 又分为2个区，一个是 From 区，一个是 To 区。每次执行 Minor GC，会将 Eden 区和 From 存活的对象放到 Survivor 的 To 区（如果 To 区不够，则直接进入 Old 区）。
+
+1. 为什么需要survivor?
+
+   survivor的存在的意义在于减少被送到老年代的对象，进而减少MajorGC的发生，Survivor的预筛选保证，只有经历16次Minor GC还在Eden中存活的对象才有资格进入Old。
+
+2. 为什么需要两个Survivor？
+
+   解决内存碎片化。
+
+   Minor GC 执行后，Eden 区被清空了，存活的对象放到了 Survivor 区，而之前 Survivor 区中的对象，可能也有一些是需要被清除的。问题来了，这时候我们怎么清除它们？在这种场景下，我们只能标记清除，而我们知道标记清除最大的问题就是内存碎片，在新生代这种经常会消亡的区域，采用标记清除必然会让内存产生严重的碎片化。因为 Survivor 有2个区域，所以每次 Minor GC，会将之前 Eden 区和 From 区中的存活对象复制到 To 区域。第二次 Minor GC 时，From 与 To 职责兑换，这时候会将 Eden 区和 To 区中的存活对象再复制到 From 区域，以此反复。
+
+   这种机制最大的好处就是，整个过程中，永远有一个 Survivor space 是空的，另一个非空的 Survivor space 是无碎片的。那么，Survivor 为什么不分更多块呢？比方说分成三个、四个、五个?显然，如果 Survivor 区再细分下去，每一块的空间就会比较小，容易导致 Survivor 区满，两块 Survivor 区可能是经过权衡之后的最佳方案。
+
+   **概括来说就是在局部应用了Copying算法，来保证经常发生回收的Eden区域不会产生大量碎片。**
+
+   
+
+**Old区**
+
+老年代占据着2/3的堆内存空间，只有在 Major GC 的时候才会进行清理，每次 GC 都会触发“Stop-The-World”。内存越大，STW 的时间也越长，所以内存也不仅仅是越大就越好。由于复制算法在对象存活率较高的老年代会进行很多次的复制操作，效率很低，所以老年代这里采用的是标记 --- 整理算法。
+
+在内存担保机制之下，无法安置的对象会直接进入老年代，以下几种情况也会进入老年代。
+
+1. 大对象
+
+   大对象指需要大量连续内存空间的对象，这部分对象不管是不是“朝生夕死”，都会直接进到老年代。这样做主要是为了避免在 Eden 区及2个 Survivor 区之间发生大量的内存复制。当你的系统有非常多“朝生夕死”的大对象时，得注意了。
+
+2. 长期存活对象
+
+   虚拟机给每个对象定义了一个对象年龄（Age）计数器。正常情况下对象会不断的在 Survivor 的 From 区与 To 区之间移动，对象在 Survivor 区中没经历一次 Minor GC，年龄就增加1岁。当年龄增加到15岁时，这时候就会被转移到老年代。当然，这里的15，JVM 也支持进行特殊设置。
+
+3. 动态对象年龄
+
+   虚拟机并不重视要求对象年龄必须到15岁，才会放入老年区，如果 Survivor 空间中相同年龄所有对象大小的综合大于 Survivor 空间的一般，年龄大于等于该年龄的对象就可以直接进去老年区，无需等你“成年”。
+
+
+
+### JVM memory
+
+线程私有的运行时数据区：程序计数器、Java虚拟机栈、本地方法栈
+
+线程共享的运行时数据区：Java堆、方法区
+
+
+
+
+
+
+
+
+
 ## MyBatis
 
 ### select
@@ -4947,7 +5146,7 @@ i=2 -> h = 31 * (31 * (31 * 0 + val[0]) + val[1]) + val[2]
 >    ```
 >    Prime numbers are chosen to best distribute data among hash buckets.  
 >    If the distribution of inputs is random and evenly spread, then the  choice of the hash code/modulus does not matter. It only has an impact  when there is a certain pattern to the inputs.
->    
+>          
 >    This is often the case when dealing with memory locations. 
 >    For  example, all 32-bit integers are aligned to addresses divisible by 4.  
 >    Check out the table below to visualize the effects of using a prime vs.  non-prime modulus:
@@ -5099,4 +5298,6 @@ class Solution {
 <img src="C:\Users\Caijinyang\AppData\Roaming\Typora\typora-user-images\image-20211224184103017.png" alt="image-20211224184103017" style="zoom: 67%;" />
 
 Capacity选取131过不了第30个case，选取131313可以通过。
+
+
 
