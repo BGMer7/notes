@@ -664,6 +664,10 @@ public class XXXController{
 
 
 
+### 
+
+
+
 
 
 
@@ -682,7 +686,7 @@ public class XXXController{
 
 
 
-## 打包部署
+### 打包部署
 
 [SpringBoot 打包部署最佳实践 - 云+社区 - 腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1884117)
 
@@ -693,6 +697,68 @@ public class XXXController{
 部署运行
 
 ```shell
-java -jar demo-0.0.1-SNAPSHOT.jar > log_gatsby_demo.out 2>&1
+java -jar demo-0.0.1-SNAPSHOT.jar > log_gatsby_demo.out 2>&1 &
 ```
+
+
+
+
+
+### install私服Maven
+
+
+
+
+
+
+
+### 多环境配置
+
+[Spring-Boot application.yml 文件拆分，实现 maven 多环境动态启用 Profiles - 掘金 (juejin.cn)](https://juejin.cn/post/6844903873530822670)
+
+[SpringBoot多环境配置详解(application-dev.yml、application-test.yml、application-prod.yml)_Wingkin的博客-程序员宅基地 - 程序员宅基地 (cxyzjd.com)](https://www.cxyzjd.com/article/Wing_kin666/111992800)
+
+[springboot开发笔记-(7)-Profile多环境配置文件加载 - SegmentFault 思否](https://segmentfault.com/a/1190000023514649)
+
+[你所不知道的spring boot多环境配置 - 简书 (jianshu.com)](https://www.jianshu.com/p/c0eaf1f8c529)
+
+除了application.yml之外，还可以创建创建application-dev.yml，application-test.yml，application-prod.yml，存放在和application.yml同一个目录下，分别用来配置本地开发环境、测试环境、生产环境。
+
+其中application.yml存放公共配置，可通过**修改active切换读取的配置文件**，比如`active: dev`改成`active: test`就是将读取application-dev.yml改为application-test.yml，环境也从本地开发变成了测试环境。
+
+```yml
+spring:
+  profiles:
+    active: dev
+  application:
+    name: data-transceivers #当前服务的名称
+```
+
+spring.profiles.active: dev表示当前加载测试环境配置application-dev.yml
+
+spring.profiles.active: prod表示加载生产环境的配置文件application-prod.yml
+
+
+
+也可以使用启动参数的方式
+
+```shell
+java -jar xxx.jar --spring.profiles.active=dev
+```
+
+
+
+使用Maven在打包时只加载出特定的Profiles配置文件
+
+打包时使用`mvn package -P dev`，仍然可以使用`java -jar xxx.jar --spring.profiles.active=dev`来运行。
+
+
+
+[idea配置多环境启动，dev、test、prod - 简书 (jianshu.com)](https://www.jianshu.com/p/b4c6d5ce3291)
+
+(完整版配置)
+
+
+
+
 
