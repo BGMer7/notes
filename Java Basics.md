@@ -2956,6 +2956,165 @@ public class Main {
 
 
 
+### String常用操作(API)
+
+[总结 | Java字符串常用操作(方法)](https://blog.csdn.net/Cherils/article/details/105889084)
+
+1. String对象是一个final对象，一旦创建了一个String对象，值就不能再次改变。
+
+   如果想要对String改变，需要使用StringBuilder或者StringBuffer。
+
+   ```java 
+   // 直接创建的方式
+   String s = "hello world!";
+   // 使用一个字符数组创建
+   char[] ch = {'h', 'e', 'l', 'l', 'o'};
+   String s = new String(ch);
+   ```
+
+   String的内部存储是一个char的数组。
+
+2. 字符串长度
+
+   ```java 
+   int len = s.length();
+   ```
+
+3. 字符串拼接
+
+   ```java
+   // String对象的拼接
+   s1.concat(s2);
+   ```
+
+4. 字符串查找
+
+   int indexOf(String s)：字符串s在指定字符串中**首次**出现的索引位置，如果没有检索到字符串s，该方法返回-1
+   int lastIndexOf(String s)：字符串s在指定字符串中**最后一次**出现的索引位置，如果没有检索到字符串s，该方法返回-1；如果s是空字符串，则返回的结果与length方法的返回结果相同，即返回整个字符串的长度。
+
+   ```java
+   int index = s.indexOf(sub);
+   int index = s.lastIndexOf(sub);
+   ```
+
+5. 获取指定未知的字符串
+
+   ```java 
+   String s = "abdc";
+   char c = s.charAt(3);
+   ```
+
+6. 获取子串
+
+   String substring()方法：实现截取字符串，利用字符串的下标索引来截取(字符串的下标是从0开始的，在字符串中空格占用一个索引位置)
+
+   - substring(int beginIndex)：截取从指定索引位置开始到字符串结尾的子串
+   - substring(int beginIndex, int endIndex)：从beginIndex开始，**到endIndex结束(不包括endIndex)**
+
+   ```java 
+   String str = "abcde";
+   String substr1 = str.substring(2); //substr1为"cde"
+   String substr2 = str.substring(2,4); //substr2为"cd"
+   ```
+
+7. 去除字符串首尾的空格
+
+   ```java
+   String str = " abcd ";
+   String strTrim = str.trim(); // "abcd"
+   ```
+
+8. 字符串替换
+
+   - String replace(char oldChar, char newChar)：将指定的字符/字符串oldchar全部替换成新的字符/字符串newChar
+
+   - String replaceAll(String regex, String replacement)：使用给定的参数 replacement替换字符串所有匹配给定的正则表达式的子字符串
+
+   - String replaceFirst(String regex, String replacement)：使用给定replacement 替换此字符串匹配给定的正则表达式的第一个子字符串
+
+     regex是正则表达式，替换成功返回替换的字符串，替换失败返回原字符串
+
+   ```java
+   String str = "abcde";
+   String newstr = str.replace("a","A"); //newstr为"Abcde"
+   ```
+
+9. 字符串相等
+
+   boolean equals(Object anObject)：将此字符串与指定的对象比较，区分大小写
+   boolean equalsIgnoreCase(String anotherString)：将此 String 与另一个 String 比较，不考虑大小写
+
+   ```java
+   String str1 = "abcde";
+   String str2 = str1;//字符串str1和str2都是一个字符串对象
+   String str3 = "ABCDE";
+   boolean isEqualed = str1.equals(str2);//返回true
+   boolean isEqualed = str1.equals(str3);//返回false
+   boolean isEqualed = str1.equlasIgnoreCase(str3);//返回true
+   ```
+
+10. 比较两个字符串
+
+    int compareTo(Object o)：把这个字符串和另一个对象比较。
+    int compareTo(String anotherString)：按字典顺序比较两个字符串。
+    比较对应字符的大小(ASCII码顺序)，如果参数字符串等于此字符串，则返回值 0；如果此字符串小于字符串参数，则返回一个小于 0 的值；如果此字符串大于字符串参数，则返回一个大于 0 的值。
+
+11. 字符串转换
+
+    ```java 
+    // String转int
+    //第一种
+    int i = Integer.parseInt(String str)
+    int i = Integer.valueOf(s).intValue();
+    
+    // String转long
+    long l = Long.parseLong(String str);
+    
+    // String转double
+    double d = Double.parseDouble(str);
+    double d = Double.valueOf(str);
+    ```
+    
+12. 字符串大小写转换
+
+    String toLowerCase()：将字符串中的所有字符从大写字母改写为小写字母
+    String toUpperCase()：将字符串中的所有字符从小写字母改写为大写字母
+
+    ```java
+    String str1 = "abcde";
+    String str2 = str1.toUpperCase(); //str2 = "ABCDE";
+    String str3 = str2.toLowerCase(); //str3 = "abcde";
+    ```
+
+13. 字符串分割
+    
+    String[] split()：根据匹配给定的正则表达式来拆分字符串，将分割后的结果存入字符数组中。
+    
+    ```java 
+    String str = "Hello World A.B.C"
+    String[] res = str.split(" ");//res = {"Hello","World","A.B.C"}
+    String[] res = str.split(" ",2);//res = {"Hello","World A.B.C"}
+    String[] res = str.split("\\.");//res = {"Hello World A","B","C"}
+    
+    String str = "A=1 and B=2 or C=3"
+    String[] res = str.split("and|or");//res = {"A=1 "," B=2 "," C=3"}
+    ```
+
+14. 字符串和byte[]的转换
+
+    byte[] getBytes()
+
+    1. byte[] getBytes()：使用平台的默认字符集将此 String 编码为 byte 序列，并将结果存储到一个新的 byte 数组中。
+    2. byte[] getBytes(String charsetName)：使用指定的字符集将此 String 编码为 byte 序列，并将结果存储到一个新的 byte 数组中。
+
+    ```java
+    byte[] str = s.getBytes();
+    ```
+
+
+
+
+
 ## Generic
 
 泛型，即参数化类型，顾名思义，就是将类型由原来的具体的类型参数化，类似于方法中的变量参数，此时类型也定义成参数形式（可以称之为类型形参），然后在使用/调用时传入具体的类型（类型实参）。
@@ -5146,7 +5305,7 @@ i=2 -> h = 31 * (31 * (31 * 0 + val[0]) + val[1]) + val[2]
 >    ```
 >    Prime numbers are chosen to best distribute data among hash buckets.  
 >    If the distribution of inputs is random and evenly spread, then the  choice of the hash code/modulus does not matter. It only has an impact  when there is a certain pattern to the inputs.
->          
+>                   
 >    This is often the case when dealing with memory locations. 
 >    For  example, all 32-bit integers are aligned to addresses divisible by 4.  
 >    Check out the table below to visualize the effects of using a prime vs.  non-prime modulus:
