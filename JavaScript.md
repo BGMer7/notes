@@ -128,9 +128,17 @@ var message = function () {
 
 
 
+## setTimeout中的函数返回值
+
+[js setTimeout 中怎么返回值 - SegmentFault 思否](https://segmentfault.com/q/1010000012682220)
+
+
+
 ## Promise
 
 [理解JavaScript Promise - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/26523836)
+
+
 
 
 
