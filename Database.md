@@ -586,6 +586,59 @@ CAS的缺点：
    flush privileges;
    ```
 
+   ```sql
+   // mysql 5.7
+   mysql> select host,user from user;
+   +-----------+---------------+
+   | host      | user          |
+   +-----------+---------------+
+   | %         | root          |
+   | localhost | mysql.session |
+   | localhost | mysql.sys     |
+   | localhost | root          |
+   +-----------+---------------+
+   4 rows in set (0.00 sec)
+   
+   mysql> create user 'rock'@'%' identified by 'cfsc@2021';
+   Query OK, 0 rows affected (0.00 sec)
+   
+   mysql> select host,user from user;
+   +-----------+---------------+
+   | host      | user          |
+   +-----------+---------------+
+   | %         | rock          |
+   | %         | root          |
+   | localhost | mysql.session |
+   | localhost | mysql.sys     |
+   | localhost | root          |
+   +-----------+---------------+
+   5 rows in set (0.00 sec)
+   
+   mysql> GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'cfsc@2021';
+   Query OK, 0 rows affected, 1 warning (0.00 sec)
+   
+   mysql> flush privileges;
+   Query OK, 0 rows affected (0.00 sec)
+   
+   mysql> select host,user from user;
+   +-----------+---------------+
+   | host      | user          |
+   +-----------+---------------+
+   | %         | rock          |
+   | %         | root          |
+   | localhost | mysql.session |
+   | localhost | mysql.sys     |
+   | localhost | root          |
+   +-----------+---------------+
+   5 rows in set (0.00 sec)
+   
+   // mtsql 8
+   mysql> GRANT ALL ON *.* TO 'root'@'%';
+   
+   // 权限设置完之后需要systemctl restart mysqld
+   ```
+
+
 10. 修改加密规则
 
     ```sql
