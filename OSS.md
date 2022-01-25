@@ -119,7 +119,9 @@ MinIO生产部署涵盖了全球。 作为全球使用最多和下载量最大�
 
  [什么是对象存储？看这一篇就够了！_MinIO (sohu.com)](https://www.sohu.com/a/391960620_505795)
 
- 
+ [开源分布式对象存储-MinIO - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/103803549)
+
+TBC...
 
  
 
