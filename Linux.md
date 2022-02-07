@@ -917,6 +917,62 @@ FILE *fp;
 
 
 
+### Linux的ls命令
+
+最常用的是`ps aux`，然后再利用一个管道符号导向到grep去查找特定的进程，然后再对特定的进程进行操作。
+
+列说明：
+
+- USER： 用户名
+- PID： 进程ID（Process ID）
+- %CPU： 进程的cpu占用率
+- %MEM： 进程的内存占用率
+- VSZ： 进程所使用的虚存的大小（Virtual Size）
+- RSS： 进程使用的驻留集大小或者是实际内存的大小，Kbytes字节。
+- TTY： 与进程关联的终端（tty）
+- STAT： 进程的状态：进程状态使用字符表示的（STAT的状态码）
+- TIME： 进程使用的总cpu时间
+- COMMAND： 正在执行的命令行命令
+
+
+
+`ps -ef`，使用标准的格式显示进程
+
+- UID： 用户ID（User ID）
+- PID： 进程ID（Process ID）
+- PPID： 父进程的进程ID（Parent Process id）
+- STIME： 启动时间
+- TTY： 与进程关联的终端（tty）
+- TIME： 进程使用的总cpu时间
+- CMD： 正在执行的命令行命令
+
+
+
+`ps -l`
+
+- F： 代表这个程序的旗标 (flag)， 4 代表使用者为 super user
+- S： 睡眠 Sleeping 休眠中, 受阻, 在等待某个条件的形成或接受到信号。
+- UID： 用户ID（User ID）
+- PID： 进程ID（Process ID）
+- PPID： 父进程的进程ID（Parent Process id）
+- C： CPU 使用的资源百分比
+- PRI： 这个是 Priority (优先执行序) 的缩写，详细后面介绍
+- NI： 这个是 Nice 值，在下一小节我们会持续介绍
+- ADDR： 这个是 kernel function，指出该程序在内存的那个部分。如果是个 running的程序，一般就是 "-"
+- SZ： 使用掉的内存大小
+- WCHAN： 目前这个程序是否正在运作当中，若为 - 表示正在运作
+- TTY： 登入者的终端机位置
+- TIME： 使用掉的 CPU 时间。
+- CMD 所下达的指令为何
+
+
+
+根据CPU使用升序排序，`ps -aux --sort -pcpu | less`
+
+根据内存使用升序排序，`ps -aux --sort -pmem | less`
+
+
+
 ### Linux的文件属性
 
 ```shell
