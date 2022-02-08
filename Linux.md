@@ -1242,6 +1242,8 @@ I/O size (minimum/optimal): 512 bytes / 512 bytes
 
 2. 对磁盘分区使用`fdisk /dev/vdb`，根据提示输n、p、1、1、wq，回车，创建分区。
 
+3. `mkfs.ext4 /dev/sdb`格式化
+
 
 
 ### Linux防火墙
@@ -1262,7 +1264,7 @@ I/O size (minimum/optimal): 512 bytes / 512 bytes
 
 ### Linux端口
 
-查看指定端口是否已经打开：firewall-cmd --query-port=6379/tcp
+查看指定端口是否已经打开：firewall-cmd --query-port=9000/tcp
 
 查看UDP类型：netstat -nupl 
 
