@@ -2,6 +2,16 @@
 
 ## MinIO
 
+### MinIO configuration
+
+#### MinIO的硬件配置要求
+
+
+
+
+
+
+
 ### MinIO deploy
 
 [Minio的单节点/集群部署及JAVA的SDK访问](https://blog.csdn.net/alanzy123/article/details/115169035)
@@ -67,6 +77,8 @@ chmod +x minio
 
 #### Linux分布式集群部署
 
+[三.minio 的分布式部署、单节点多磁盘、多节点模式](https://blog.csdn.net/xixiyuguang/article/details/119456729)
+
 ##### Linux分布式部署的优势
 
 1. 数据保护
@@ -99,99 +111,322 @@ chmod +x minio
 >分部署部署最少需要四个示例，不管是四个服务器，每台部署一个实例。还是一个服务器部署四个实例。
 >存储的文件会以n/2个节点内存分配到每个实例上，比如创建8个实例，上传的文件大小80MB，那么每个实例存在20MB
 
-示例1: 启动分布式Minio实例，8个节点，每节点1块盘，需要在8个节点上都运行下面的命令。
+
+
+#### 分布式部署实际操作
+
+[Minio分布式集群搭建 | DevOps (centoscn.vip)](https://www.centoscn.vip/1480.html)
+
+CentOS 7，使用两台服务器，每台服务器挂载两块磁盘，模拟四个节点。
 
 ```shell
-export MINIO_ACCESS_KEY=<ACCESS_KEY>
-export MINIO_SECRET_KEY=<SECRET_KEY>
-minio server http://192.168.1.11/export1 http://192.168.1.12/export2 \
-               http://192.168.1.13/export3 http://192.168.1.14/export4 \
-               http://192.168.1.15/export5 http://192.168.1.16/export6 \
-               http://192.168.1.17/export7 http://192.168.1.18/export8
+[root@localhost minio]# cat /etc/redhat-release
+CentOS Linux release 7.9.2009 (Core)
+
+ip: 10.189.66.196
+ip: 10.189.66.197
 ```
 
-实例2：启动分布式Minio实例，4节点，每节点4块盘，需要在4个节点上都运行下面的命令。
+
+
+##### 磁盘的挂载
+
+首先创建两个用于存放MinIO存储数据的目录，
 
 ```shell
-export MINIO_ACCESS_KEY=<ACCESS_KEY>
-export MINIO_SECRET_KEY=<SECRET_KEY>
-minio server http://192.168.1.11/export1 http://192.168.1.11/export2 \
-               http://192.168.1.11/export3 http://192.168.1.11/export4 \
-               http://192.168.1.12/export1 http://192.168.1.12/export2 \
-               http://192.168.1.12/export3 http://192.168.1.12/export4 \
-               http://192.168.1.13/export1 http://192.168.1.13/export2 \
-               http://192.168.1.13/export3 http://192.168.1.13/export4 \
-               http://192.168.1.14/export1 http://192.168.1.14/export2 \
-               http://192.168.1.14/export3 http://192.168.1.14/export4
-
+[root@minio1 ~]# mkdir -p /home/data1
+[root@minio1 ~]# mkdir -p /home/data2
+[root@minio2 ~]# mkdir -p /home/data1
+[root@minio2 ~]# mkdir -p /home/data2
 ```
 
-实例3：非官方实例，使用2个服务器分别挂载2个节点来模拟4个节点。1
+这两个目录创建好之后分别挂载一个磁盘。
 
-1. 首先配置hostname
+磁盘的挂载是一个老生常谈的问题了，通过`df -h`可以查看已经挂载的目录，也就是整个系统的文件系统。
 
-   ```shell
-   hostnamectl --static set-hostname CENTOS-NODE01
-   hostnamectl --static set-hostname CENTOS-NODE02
-   ```
+通过`fdisk - l`可以查看目前服务器上的所有装置分区，可以通过`fdisk -l`查看
 
-2. 配置/etc/hosts
+```shell
+[root@localhost minio]# fdisk -l
 
-   ```shell
-   vi /etc/hosts
-   192.168.xx.xxx   CENTOS-NODE01
-   192.168.xx.xxx   CENTOS-NODE02
-   ```
+Disk /dev/sda: 107.4 GB, 107374182400 bytes, 209715200 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk label type: dos
+Disk identifier: 0x000c01ce
 
-3. 配置/etc/profile
+   Device Boot      Start         End      Blocks   Id  System
+/dev/sda1   *        2048     2099199     1048576   83  Linux
+/dev/sda2         2099200   209469439   103685120   8e  Linux LVM
 
-   ```shell
-   vim /etc/profile
-   export MINIO_ACCESS_KEY="accesskey"
-   export MINIO_SECRET_KEY="secretkeys"
-   ```
+Disk /dev/sdb: 107.4 GB, 107374182400 bytes, 209715200 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk label type: dos
+Disk identifier: 0xfc308637
 
-4. 配置每个节点的启动脚本
+   Device Boot      Start         End      Blocks   Id  System
+/dev/sdb1            2048   209715199   104856576   83  Linux
 
-   对于每台服务的第一个节点（即 9000端口），配置如下
-
-   ```shell
-   #!/bin/bash
-   export MINIO_ACCESS_KEY=accesskey
-   export MINIO_SECRET_KEY=secretkeys
-   nohup /opt/minio/minio server --address :9000 \
-   http://CENTOS-NODE01/minio-data1 \
-   http://CENTOS-NODE01/minio-data2 \
-   http://CENTOS-NODE02/minio-data1 \
-   http://CENTOS-NODE02/minio-data2 \
-   > /opt/minio/log/minio.log 2>&1 &
-   ```
-
-   对于每台服务的第二个节点（即 9001端口），配置如下
-
-   ```shell
-   #!/bin/bash
-   export MINIO_ACCESS_KEY=accesskey
-   export MINIO_SECRET_KEY=secretkeys
-   nohup /opt/minio-2/minio server --address :9001 \
-   http://CENTOS-NODE01/minio-data1 \
-   http://CENTOS-NODE01/minio-data2 \
-   http://CENTOS-NODE02/minio-data1 \
-   http://CENTOS-NODE02/minio-data2 \
-   > /opt/minio-2/log/minio.log 2>&1 &
-   ```
-
-5. 按照单节点启动的方式启动集群每个节点
-
-   如果部署过单机节点，如要在相同环境上部署集群，要注意清空目录后再重新部署！
+Disk /dev/mapper/centos-root: 97.7 GB, 97710505984 bytes, 190840832 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
 
 
+Disk /dev/mapper/centos-swap: 8455 MB, 8455716864 bytes, 16515072 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+
+
+Disk /dev/sdc: 10.7 GB, 10737418240 bytes, 20971520 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk label type: dos
+Disk identifier: 0x71c2e252
+
+   Device Boot      Start         End      Blocks   Id  System
+/dev/sdc1            2048    20971519    10484736   83  Linux
+
+Disk /dev/sdd: 10.7 GB, 10737418240 bytes, 20971520 sectors
+Units = sectors of 1 * 512 = 512 bytes
+Sector size (logical/physical): 512 bytes / 512 bytes
+I/O size (minimum/optimal): 512 bytes / 512 bytes
+Disk label type: dos
+Disk identifier: 0x32828e30
+
+   Device Boot      Start         End      Blocks   Id  System
+/dev/sdd1            2048    20971519    10484736   83  Linux
+```
+
+此时是已经挂载了的状态，如果有空的还没有挂载的磁盘，例如该磁盘名叫`/dev/sde1`，那么就使用命令`fdisk /dev/sde1`进入磁盘挂载流程，根据提示输n、p、1、1、wq，回车，创建分区。
+
+然后将该分区格式化，为挂载做准备。
+
+```shell
+mkfs.ext4 /dev/sde1
+```
+
+直接挂载，在上述例子中，已经将`/dev/sdc1`和`/dev/sdd1`挂载在两个目录下，使用的命令是
+
+```shell
+[root@minio1 ~]# mount /dev/sdc1 /home/data1
+[root@minio1 ~]# mount /dev/sdd1 /home/data2
+```
+
+挂载结束之后就可以通过`df -h`看到在文件系统中已经有了挂载
+
+```shell
+[root@minio1 ~]# df -h
+Filesystem               Size  Used Avail Use% Mounted on
+devtmpfs                 7.9G     0  7.9G   0% /dev
+tmpfs                    7.9G     0  7.9G   0% /dev/shm
+tmpfs                    7.9G  800M  7.1G  10% /run
+tmpfs                    7.9G     0  7.9G   0% /sys/fs/cgroup
+/dev/mapper/centos-root   91G   17G   75G  18% /
+/dev/sda1               1014M  141M  874M  14% /boot
+tmpfs                    1.6G     0  1.6G   0% /run/user/0
+overlay                   91G   17G   75G  18% /var/lib/docker/overlay2/00af9b52653d18671c207aadb8e4f43a2a961b440ccef05d0d5f5aeb9582a1f7/merged
+/dev/sdb1                296G  1.5G  279G   1% /data
+/dev/sdc1                9.8G   39M  9.2G   1% /home/data1
+/dev/sdd1                9.8G   39M  9.2G   1% /home/data2
+```
+
+磁盘挂载完成。
 
 
 
+##### 创建脚本目录
+
+`/opt/minio`是启动脚本目录
+
+`/etc/minio`是集群配置目录
+
+```shell
+[root@minio1 ~]# mkdir -p /opt/minio
+[root@minio2 ~]# mkdir -p /opt/minio
+
+
+[root@minio1 ~]# mkdir -p /etc/minio
+[root@minio2 ~]# mkdir -p /etc/minio
+```
 
 
 
+##### 下载minio执行文件
+
+由于是内网环境下的测试服务器，无法连接互联网，因此直接下载下来的二进制可执行文件，将文件通过WinSCP上传到服务器。
+
+并存放在`/opt/minio`目录下。
+
+
+
+##### 编写启动脚本
+
+其中，“MINIO_ACCESS_KEY”为用户名，“MINIO_SECRET_KEY”为密码，密码不能设置过于简单，不然minio会启动失败，“–config-dir”指定集群配置文件目录
+
+```shell
+[root@minio1 ~]# vim /opt/minio/run.sh
+#!/bin/bash
+export MINIO_ACCESS_KEY=minioAdmin
+export MINIO_SECRET_KEY=minioAdmin
+ 
+/opt/minio/minio server --config-dir /etc/minio \
+http://10.189.66.196/home/data1 http://10.189.66.196/home/data2 \
+http://10.189.66.197/home/data1 http://10.189.66.197/home/data2 \
+
+[root@minio2 ~]# vim /opt/minio/run.sh
+#!/bin/bash
+export MINIO_ACCESS_KEY=minioAdmin
+export MINIO_SECRET_KEY=minioAdmin
+ 
+/opt/minio/minio server --config-dir /etc/minio \
+http://10.189.66.196/home/data1 http://10.189.66.196/home/data2 \
+http://10.189.66.197/home/data1 http://10.189.66.197/home/data2 \
+```
+
+**这里没有输出到log，可以将日志输入到log中**
+
+
+
+##### 编写服务脚本
+
+```shell
+[root@minio1 ~]# vim /usr/lib/systemd/system/minio.service
+[Unit]
+Description=Minio service
+Documentation=https://docs.minio.io/
+ 
+[Service]
+WorkingDirectory=/opt/minio/
+ExecStart=/opt/minio/run.sh
+ 
+Restart=on-failure
+RestartSec=5
+ 
+[Install]
+WantedBy=multi-user.target
+
+
+
+[root@minio2 ~]# vim /usr/lib/systemd/system/minio.service
+[Unit]
+Description=Minio service
+Documentation=https://docs.minio.io/
+ 
+[Service]
+WorkingDirectory=/opt/minio/
+ExecStart=/opt/minio/run.sh
+ 
+Restart=on-failure
+RestartSec=5
+ 
+[Install]
+WantedBy=multi-user.target
+```
+
+
+
+##### 添加执行权限
+
+节点1和节点2都需要添加可执行权限，包括MinIO的二进制可执行文件、启动脚本、服务脚本
+
+```shell 
+[root@minio1 minio]# chmod +x minio
+[root@minio1 minio]# chmod +x /opt/minio/run.sh
+
+[root@minio2 minio]# chmod +x minio
+[root@minio2 minio]# chmod +x /opt/minio/run.sh
+
+[root@minio1 ~]# chmod +x /usr/lib/systemd/system/minio.service
+[root@minio2 ~]# chmod +x /usr/lib/systemd/system/minio.service
+```
+
+
+
+##### 启动服务
+
+```shell
+[root@minio1 minio]# systemctl daemon-reload
+[root@minio1 minio]# systemctl start minio
+[root@minio1 minio]# systemctl enable minio
+Created symlink from /etc/systemd/system/multi-user.target.wants/minio.service to /usr/lib/systemd/system/minio.service.
+```
+
+通过status查看service的状态
+
+```shell
+systemctl status minio.service -l
+```
+
+启动服务最好各个节点之间启动时间的间隙不超过十五分钟
+
+```shell
+[root@minio1 minio]# systemctl daemon-reload
+[root@minio1 minio]# systemctl start minio
+[root@minio1 minio]# systemctl enable minio
+Created symlink from /etc/systemd/system/multi-user.target.wants/minio.service to /usr/lib/systemd/system/minio.service.
+[root@minio1 minio]# systemctl status minio.service -l
+```
+
+启动成功之后的MinIO服务状态
+
+```shell
+[root@localhost minio]# systemctl status minio.service -l
+● minio.service - Minio service
+   Loaded: loaded (/usr/lib/systemd/system/minio.service; enabled; vendor preset: disabled)
+   Active: active (running) since Tue 2022-02-08 16:02:42 CST; 3h 49min ago
+     Docs: https://docs.minio.io/
+ Main PID: 19048 (run.sh)
+   CGroup: /system.slice/minio.service
+           ├─19048 /bin/bash /opt/minio/run.sh
+           └─19049 /opt/minio/minio server --config-dir /etc/minio http://10.189.66.196/home/data1 http://10.189.66.196/home/data2 http://10.189.66.197/home/data1 http://10.189.66.197/home/data2
+
+Feb 08 16:02:42 localhost.localdomain run.sh[19048]: Please use MINIO_ROOT_USER and MINIO_ROOT_PASSWORD
+Feb 08 16:02:42 localhost.localdomain run.sh[19048]: Waiting for all MinIO sub-systems to be initialized.. lock acquired
+Feb 08 16:02:42 localhost.localdomain run.sh[19048]: Automatically configured API requests per node based on available memory on the system: 92
+Feb 08 16:02:42 localhost.localdomain run.sh[19048]: All MinIO sub-systems initialized successfully
+Feb 08 16:02:42 localhost.localdomain run.sh[19048]: Waiting for all MinIO IAM sub-system to be initialized.. lock acquired
+Feb 08 16:02:42 localhost.localdomain run.sh[19048]: Status:         4 Online, 0 Offline.
+Feb 08 16:02:42 localhost.localdomain run.sh[19048]: API: http://10.189.66.197:9000  http://127.0.0.1:9000
+Feb 08 16:02:42 localhost.localdomain run.sh[19048]: Console: http://10.189.66.197:17200 http://127.0.0.1:17200
+Feb 08 16:02:42 localhost.localdomain run.sh[19048]: Documentation: https://docs.min.io
+Feb 08 16:02:42 localhost.localdomain run.sh[19048]: WARNING: Console endpoint is listening on a dynamic port (17200), please use --console-address ":PORT" to choose a static port.
+```
+
+
+
+##### 访问管理界面
+
+在status查看的状态中，可以看到访问控制台界面的IP和端口，
+
+实际上使用任何节点的任何IP+9000端口都会自动重定向到console所指定的端口
+
+```shell
+Feb 08 16:02:42 localhost.localdomain run.sh[19048]: Status:         4 Online, 0 Offline.
+Feb 08 16:02:42 localhost.localdomain run.sh[19048]: API: http://10.189.66.197:9000  http://127.0.0.1:9000
+Feb 08 16:02:42 localhost.localdomain run.sh[19048]: Console: http://10.189.66.197:17200 http://127.0.0.1:17200
+```
+
+
+
+##### 查看MinIO状态
+
+![image-20220208200026502](C:\Users\Caijinyang\AppData\Roaming\Typora\typora-user-images\image-20220208200026502.png)
+
+
+
+![image-20220208200042166](C:\Users\Caijinyang\AppData\Roaming\Typora\typora-user-images\image-20220208200042166.png)
+
+
+
+##### 配置Nginx负载均衡
+
+[minio搭建单机/集群 - 简书 (jianshu.com)](https://www.jianshu.com/p/bfde2495aa94)
 
 
 
