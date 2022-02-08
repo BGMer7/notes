@@ -1244,6 +1244,8 @@ I/O size (minimum/optimal): 512 bytes / 512 bytes
 
 3. `mkfs.ext4 /dev/sdb`格式化
 
+4. `mount /dev/sdb /home/data`挂载
+
 
 
 ### Linux防火墙
