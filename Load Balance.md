@@ -264,9 +264,177 @@ Nginx采用的是反向代理技术，代理服务器来接受Internet上的连�
 
 
 
-
-
 ## F5
+
+
+
+
+
+
+
+
+
+## CentOS下Nginx安装
+
+[Centos 安装Nginx - 云+社区 - 腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1924770)
+
+### 有yum源
+
+1. 由于Nginx是基于C/C++编写的框架，所以需要有gcc/g++环境，一般来说Linux都会包含，如果没有的话需要用yum安装
+
+   ```shell
+   yum install -y gcc gcc-c++
+   ```
+
+2. 安装Nginx需要有三个前置依赖包：pcre、zlib、openssl
+
+   ```shell
+   yum install -y zlib pcre openssl
+   ```
+
+   这三个模块直接通过yum源安装即可。
+
+
+
+### 无yum源
+
+如果没有互联网访问，那我们就只能将压缩包手动上传至服务器，将pcre、zlib、openssl、nginx四个压缩包上传到服务器，放在同一个目录下；
+
+```shell
+[root@localhost nginx-install]# ll
+total 18308
+-rw-r--r-- 1 root root  1060580 Nov 11 09:58 nginx-1.19.9.tar.gz
+-rw-r--r-- 1 root root 14978663 Nov 11 10:12 openssl-3.0.0.tar.gz
+-rw-r--r-- 1 root root  2096552 Nov 11 10:05 pcre-8.45.tar.gz
+-rw-r--r-- 1 root root   607698 Nov 11 10:12 zlib-1.2.11.tar.gz
+```
+
+把四个压缩包都解压
+
+```shell
+[root@localhost nginx-install]# tar -zxvf nginx-1.19.9.tar.gz
+[root@localhost nginx-install]# tar -zxvf pcre-8.45.tar.gz
+[root@localhost nginx-install]# tar -zxvf openssl-3.0.0.tar.gz
+[root@localhost nginx-install]# tar -zxvf zlib-1.2.11.tar.gz
+
+[root@localhost nginx-install]# ll
+total 18328
+drwxr-xr-x  8 1001  1001      158 Mar 30  2021 nginx-1.19.9
+-rw-r--r--  1 root root   1060580 Nov 11 09:58 nginx-1.19.9.tar.gz
+drwxrwxr-x 20 root root      4096 Sep  7 19:46 openssl-3.0.0
+-rw-r--r--  1 root root  14978663 Nov 11 10:12 openssl-3.0.0.tar.gz
+drwxr-xr-x  7 1169  1169     8192 Jun 16  2021 pcre-8.45
+-rw-r--r--  1 root root   2096552 Nov 11 10:05 pcre-8.45.tar.gz
+drwxr-xr-x 14  501 games     4096 Jan 16  2017 zlib-1.2.11
+-rw-r--r--  1 root root    607698 Nov 11 10:12 zlib-1.2.11.tar.gz
+```
+
+执行编译
+
+```shell
+[root@localhost nginx-install]# cd pcre-8.45/
+[root@localhost pcre-8.45]# ./configure
+[root@localhost pcre-8.45]# make
+[root@localhost pcre-8.45]# make install
+[root@localhost pcre-8.45]# cd ../openssl-3.0.0/
+[root@localhost openssl-3.0.0]# ./config
+[root@localhost openssl-3.0.0]# make
+[root@localhost openssl-3.0.0]# make install
+[root@localhost openssl-3.0.0]# cd ../zlib-1.2.11/
+[root@localhost zlib-1.2.11]# ./configure
+[root@localhost zlib-1.2.11]# make
+[root@localhost zlib-1.2.11]# make install
+[root@localhost zlib-1.2.11]# cd ../nginx-1.19.9/
+[root@localhost nginx-1.19.9]# ./configure
+[root@localhost nginx-1.19.9]# make
+[root@localhost nginx-1.19.9]# make install
+
+[root@localhost nginx-1.19.9]# whereis nginx
+nginx: /usr/local/nginx
+
+[root@localhost nginx-1.19.9]# cd /usr/local/nginx
+
+[root@localhost nginx]# ll
+total 0
+drwxr-xr-x 2 root root 333 Feb  9 15:22 conf
+drwxr-xr-x 2 root root  40 Feb  9 15:22 html
+drwxr-xr-x 2 root root   6 Feb  9 15:22 logs
+drwxr-xr-x 2 root root  19 Feb  9 15:22 sbin
+
+[root@localhost nginx]# cd conf/
+[root@localhost conf]# ll
+total 68
+-rw-r--r-- 1 root root 1077 Feb  9 15:22 fastcgi.conf
+-rw-r--r-- 1 root root 1077 Feb  9 15:22 fastcgi.conf.default
+-rw-r--r-- 1 root root 1007 Feb  9 15:22 fastcgi_params
+-rw-r--r-- 1 root root 1007 Feb  9 15:22 fastcgi_params.default
+-rw-r--r-- 1 root root 2837 Feb  9 15:22 koi-utf
+-rw-r--r-- 1 root root 2223 Feb  9 15:22 koi-win
+-rw-r--r-- 1 root root 5231 Feb  9 15:22 mime.types
+-rw-r--r-- 1 root root 5231 Feb  9 15:22 mime.types.default
+-rw-r--r-- 1 root root 2656 Feb  9 15:22 nginx.conf
+-rw-r--r-- 1 root root 2656 Feb  9 15:22 nginx.conf.default
+-rw-r--r-- 1 root root  636 Feb  9 15:22 scgi_params
+-rw-r--r-- 1 root root  636 Feb  9 15:22 scgi_params.default
+-rw-r--r-- 1 root root  664 Feb  9 15:22 uwsgi_params
+-rw-r--r-- 1 root root  664 Feb  9 15:22 uwsgi_params.default
+-rw-r--r-- 1 root root 3610 Feb  9 15:22 win-utf
+
+[root@localhost conf]# cd ../sbin/
+[root@localhost sbin]# ll
+total 3792
+-rwxr-xr-x 1 root root 3881592 Feb  9 15:22 nginx
+```
+
+nginx的命令
+
+```shell
+./nginx 
+./nginx -s stop
+./nginx -s quit // 优雅关闭
+./nginx -s reload
+```
+
+查看nginx进程
+
+```shell
+[root@localhost sbin]# ps aux|grep nginx
+root     27588  0.0  0.0  20572   612 ?        Ss   15:32   0:00 nginx: master process ./nginx
+nobody   27589  0.0  0.0  23092  1612 ?        S    15:32   0:00 nginx: worker process
+```
+
+nginx启动之后，通过浏览器访问该服务器的IP地址，页面显示
+
+># Welcome to nginx!
+>
+>If you see this page, the nginx web server is successfully installed and working. Further configuration is required.
+>
+>For online documentation and support please refer to [nginx.org](http://nginx.org/).
+>Commercial support is available at [nginx.com](http://nginx.com/).
+>
+>*Thank you for using nginx.*
+
+即为安装成功。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
