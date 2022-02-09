@@ -428,8 +428,205 @@ Feb 08 16:02:42 localhost.localdomain run.sh[19048]: Console: http://10.189.66.1
 
 [minio搭建单机/集群 - 简书 (jianshu.com)](https://www.jianshu.com/p/bfde2495aa94)
 
+首先安装Nginx，部署完成之后修改Nginx的配置文件。
+
+通过查看进程和端口等方式确认Nginx已经在运行中
+
+```shell
+[root@localhost sbin]# ps aux | grep nginx
+root      4980  0.0  0.0  20572   620 ?        Ss   16:56   0:00 nginx: master process ./nginx
+nobody    4981  0.0  0.0  23092  1624 ?        S    16:56   0:00 nginx: worker process
+
+[root@localhost sbin]# netstat -nltp
+Active Internet connections (only servers)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State       PID/Program name
+tcp        0      0 0.0.0.0:9999            0.0.0.0:*               LISTEN      4980/nginx: master
+tcp        0      0 0.0.0.0:22              0.0.0.0:*               LISTEN      3066/sshd
+tcp6       0      0 :::9000                 :::*                    LISTEN      19049/minio
+tcp6       0      0 :::17200                :::*                    LISTEN      19049/minio
+tcp6       0      0 :::22                   :::*                    LISTEN      3066/sshd
+```
+
+主要的配置修改在`/usr/local/nginx/conf/nginx.conf`
+
+```shell
+[root@localhost nginx]# cd conf/
+[root@localhost conf]# ll
+total 68
+-rw-r--r-- 1 root root 1077 Feb  9 14:56 fastcgi.conf
+-rw-r--r-- 1 root root 1077 Feb  9 14:56 fastcgi.conf.default
+-rw-r--r-- 1 root root 1007 Feb  9 14:56 fastcgi_params
+-rw-r--r-- 1 root root 1007 Feb  9 14:56 fastcgi_params.default
+-rw-r--r-- 1 root root 2837 Feb  9 14:56 koi-utf
+-rw-r--r-- 1 root root 2223 Feb  9 14:56 koi-win
+-rw-r--r-- 1 root root 5231 Feb  9 14:56 mime.types
+-rw-r--r-- 1 root root 5231 Feb  9 14:56 mime.types.default
+-rw-r--r-- 1 root root 2870 Feb  9 16:56 nginx.conf
+-rw-r--r-- 1 root root 2656 Feb  9 14:56 nginx.conf.default
+-rw-r--r-- 1 root root  636 Feb  9 14:56 scgi_params
+-rw-r--r-- 1 root root  636 Feb  9 14:56 scgi_params.default
+-rw-r--r-- 1 root root  664 Feb  9 14:56 uwsgi_params
+-rw-r--r-- 1 root root  664 Feb  9 14:56 uwsgi_params.default
+-rw-r--r-- 1 root root 3610 Feb  9 14:56 win-utf
+```
+
+修改完成之后的nginx.conf如下：
+
+```shell
+#user  nobody;
+worker_processes  1;
+
+#error_log  logs/error.log;
+#error_log  logs/error.log  notice;
+#error_log  logs/error.log  info;
+
+#pid        logs/nginx.pid;
 
 
+events {
+    worker_connections  1024;
+}
+
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+    #                  '$status $body_bytes_sent "$http_referer" '
+    #                  '"$http_user_agent" "$http_x_forwarded_for"';
+
+    #access_log  logs/access.log  main;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    #keepalive_timeout  0;
+    keepalive_timeout  65;
+
+    #gzip  on;
+
+    upstream minio {
+        least_conn;
+        #ip_hash;
+        server 10.189.66.196:9000;
+        #server 10.189.66.196:9001;
+        server 10.189.66.197:9000;
+        #server 10.189.66.197:9001;
+    }
+
+
+
+    server {
+        listen       9999;
+        server_name  minio;
+
+        #charset koi8-r;
+
+        #access_log  logs/host.access.log  main;
+
+        location / {
+            proxy_pass http://minio;
+            proxy_set_header Host $http_host;
+            client_max_body_size 1000m;
+        }
+
+        #error_page  404              /404.html;
+
+        # redirect server error pages to the static page /50x.html
+        #
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+
+        # proxy the PHP scripts to Apache listening on 127.0.0.1:80
+        #
+        #location ~ \.php$ {
+        #    proxy_pass   http://127.0.0.1;
+        #}
+
+        # pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000
+        #
+        #location ~ \.php$ {
+        #    root           html;
+        #    fastcgi_pass   127.0.0.1:9000;
+        #    fastcgi_index  index.php;
+        #    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;
+        #    include        fastcgi_params;
+        #}
+
+        # deny access to .htaccess files, if Apache's document root
+        # concurs with nginx's one
+        #
+        #location ~ /\.ht {
+        #    deny  all;
+        #}
+    }
+
+
+    # another virtual host using mix of IP-, name-, and port-based configuration
+    #
+    #server {
+    #    listen       8000;
+    #    listen       somename:8080;
+    #    server_name  somename  alias  another.alias;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+
+
+    # HTTPS server
+    #
+    #server {
+    #    listen       443 ssl;
+    #    server_name  localhost;
+
+    #    ssl_certificate      cert.pem;
+    #    ssl_certificate_key  cert.key;
+
+    #    ssl_session_cache    shared:SSL:1m;
+    #    ssl_session_timeout  5m;
+
+    #    ssl_ciphers  HIGH:!aNULL:!MD5;
+    #    ssl_prefer_server_ciphers  on;
+
+    #    location / {
+    #        root   html;
+    #        index  index.html index.htm;
+    #    }
+    #}
+
+}
+```
+
+主要的修改内容在
+
+```shell
+upstream minio {
+    least_conn;
+    #ip_hash;
+    server 10.189.66.196:9000;
+    #server 10.189.66.196:9001;
+    server 10.189.66.197:9000;
+    #server 10.189.66.197:9001;
+}
+
+location / {
+    proxy_pass http://minio;
+    proxy_set_header Host $http_host;
+    client_max_body_size 1000m;
+}
+```
+
+>在Nginx配置MinIO代理中，通过upstream配置了ip和端口，访问的时候会出现以下问题：
+>
+>1. 浏览器的ip地址栏会重新加载，但是通过Nginx负载均衡是反向代理，用户不应该会看到IP的改变，10.189.66.197:9999就是这个ip，而不应该跳转到别的端口。（存疑）
+>2. 由于upstream中还有一个server在10.189.66.196:9000，访问10.189.66.196:9000的时候MinIO又会将这个请求重定向到10.189.66.196:14546这个网页服务器上，也就是MinIO的H5控制台，所以最终的Nginx效果变成了访问10.189.66.197:14546，那么这个结果自然不对了。
+>3. 但是单独访问10.189.66.196:9000还是会重定向到10.189.66.199:14546，网页还是正常打开。
 
 
 
