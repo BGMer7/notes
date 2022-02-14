@@ -521,10 +521,13 @@ public class Hello implements HelloInterface{
 代理类：
 
 ```java
-public class Hello implements HelloInterface{
+public class HelloProxy implements HelloInterface{
+    private HelloInterface helloInterface = new Hello();
     @Override
     public void sayHello() {
-        System.out.println("Hello zhanghao!");
+        System.out.println("Before invoke sayHello" );
+        helloInterface.sayHello();
+        System.out.println("After invoke sayHello");
     }
 }
 ```
@@ -1068,7 +1071,7 @@ HashSet 的实现是依赖于 HashMap 的，HashSet 的值都是存储在 HashMa
 
 
 
-## Java Concurrency
+## Java Concurrency(TBD)
 
 ### 1. 并发和并行
 
@@ -1122,7 +1125,7 @@ new\ runnable\ blocked\ waiting\ time waiting\ terminated
 
 >1. 初始(NEW)：新创建了一个线程对象，但还没有调用start()方法。
 >2. 运行(RUNNABLE)：Java线程中将就绪（ready）和运行中（running）两种状态笼统的称为“运行”。
->   线程对象创建后，其他线程(比如main线程）调用了该对象的start()方法。该状态的线程位于可运行线程池中，等待被线程调度选中，获取CPU的使用权，此时处于就绪状态（ready）。就绪状态的线程在获得CPU时间片后变为运行中状态（running）。
+>     线程对象创建后，其他线程(比如main线程）调用了该对象的start()方法。该状态的线程位于可运行线程池中，等待被线程调度选中，获取CPU的使用权，此时处于就绪状态（ready）。就绪状态的线程在获得CPU时间片后变为运行中状态（running）。
 >3. 阻塞(BLOCKED)：表示线程阻塞于锁。
 >4. 等待(WAITING)：进入该状态的线程需要等待其他线程做出一些特定动作（通知或中断）。
 >5. 超时等待(TIMED_WAITING)：该状态不同于WAITING，它可以在指定的时间后自行返回。
@@ -1258,7 +1261,7 @@ new\ runnable\ blocked\ waiting\ time waiting\ terminated
 
 >1. 初始(NEW)：新创建了一个线程对象，但还没有调用start()方法。
 >2. 运行(RUNNABLE)：Java线程中将就绪（ready）和运行中（running）两种状态笼统的称为“运行”。
->   线程对象创建后，其他线程(比如main线程）调用了该对象的start()方法。该状态的线程位于可运行线程池中，等待被线程调度选中，获取CPU的使用权，此时处于就绪状态（ready）。就绪状态的线程在获得CPU时间片后变为运行中状态（running）。
+>     线程对象创建后，其他线程(比如main线程）调用了该对象的start()方法。该状态的线程位于可运行线程池中，等待被线程调度选中，获取CPU的使用权，此时处于就绪状态（ready）。就绪状态的线程在获得CPU时间片后变为运行中状态（running）。
 >3. 阻塞(BLOCKED)：表示线程阻塞于锁。
 >4. 等待(WAITING)：进入该状态的线程需要等待其他线程做出一些特定动作（通知或中断）。
 >5. 超时等待(TIMED_WAITING)：该状态不同于WAITING，它可以在指定的时间后自行返回。
@@ -1307,6 +1310,487 @@ public class Test {
 
 
 ### 10. Java线程同步的方法
+
+1. 使用Synchronized关键字
+2. wait和notify
+3. 使用特殊变量volatile实现同步
+4. 使用可重入锁实现同步
+5. 使用阻塞队列实现线程同步
+6. 使用信号semaphore
+
+
+
+### 11. Thread.interrupt()
+
+在一个线程对象上调用 interrupt() 方法，真正有影响的是 wait、join、sleep 方法，当然这 3 个方法包括它们的重载方法。请注意：上面这三个方法都会抛出 InterruptedException。
+
+
+
+首先，当我们调用线程的interrupt方法的时候，有两个作用：
+
+1. 如果线程此时处于阻塞状态，例如调用了wait()方法，就会立刻退出，抛出InterruptedException异常，线程可以通过捕捉InterruptedException来做处理。
+
+   实际上，Object.wait()、Thread.join()、Thread.sleep()被阻塞的时候，调用interrupt方法都会抛出一个InterruptedException。
+
+2. 如果此线程正处于运行状态，线程就可以不受影响，继续运行，仅仅是线程的中断标记被设置为true。所以，程序可以在适当的位置通过调用isInterrupted()方法来查看自己是否被中断，并执行退出操作。
+
+
+
+### 12. ThreadLocal
+
+
+
+
+
+
+
+### 13. synchronized
+
+
+
+
+
+### 14. synchronized的使用场景
+
+
+
+
+
+### 15. jdk1.6之后的synchronized关键字做了哪些优化？
+
+
+
+
+
+### 16. synchronized和ReenTrantLock
+
+
+
+
+
+
+
+
+### 17. synchronized和volatile
+
+
+
+
+
+
+
+### 18. ReentrantReadWriteLock 
+
+
+
+
+
+
+
+### 19. 乐观锁(CAS, compare and swap)
+
+[重新认识CAS 跟 AQS 你了解乐观锁和悲观锁吗？ - Java野生程序猿 - 博客园 (cnblogs.com)](https://www.cnblogs.com/jiahaoJAVA/p/11309668.html)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### 20. 乐观锁常用的两种实现方式
+
+
+
+
+
+### 21. CAS和synchronized
+
+
+
+
+
+
+
+### 22. 悲观锁
+
+
+
+
+
+
+
+
+
+### 23. Java原子类
+
+
+
+
+
+
+
+
+
+### 24. atomic的原理
+
+
+
+
+
+
+
+### 25. 同步器AQS
+
+
+
+
+
+### 26. AQS对于资源的共享模式
+
+
+
+
+
+
+
+### 27. semaphore和ReenterantLock
+
+
+
+
+
+
+
+### 28. Cyclic和CountDownLatch
+
+
+
+
+
+
+
+### 29. Thread pool
+
+
+
+
+
+
+
+### 30. 创建线程池的常用参数
+
+
+
+
+
+
+
+### 31. execute()和submit()
+
+
+
+
+
+
+
+### 32. Fork和Join并行框架的理解
+
+
+
+
+
+### 33. JDK中的并发容器
+
+
+
+
+
+
+
+### 34. CopyOnWriteArrayList
+
+
+
+
+
+
+
+
+
+### 35. BlockingQueue
+
+
+
+
+
+
+
+### 36. Java内存模型
+
+
+
+
+
+
+
+
+
+## JVM
+
+
+
+
+
+
+
+
+
+## SSM
+
+### 1. Spring框架的优点
+
+1. Spring轻量级，基础包大概需要2MB
+2. 控制反转IoC：Spring 通过控制反转实现了松散耦合，对象们给出它们的依赖，而不是创建或查找依赖的对象们。
+3. 面向切面的编程(AOP)：Spring 支持面向切面的编程，并且把应用业务逻辑和系统服务分开。
+4. 容器：Spring 包含并管理应用中对象的生命周期和配置。
+5. 支持声明式事务处理：只需要通过配置就可以完成对事物的管理，而无须手动编程。
+6. MVC框架：Spring 的 Web 框架是个精心设计的框架，是 Web 框架的一个很好的替代品。
+7. 方便集成各种优秀框架：Spring不排斥各种优秀的开源框架，其内部提供了对各种优秀框架（如Struts、Hibernate、MyBatis、Quartz等）的直接支持。
+
+
+
+### 2. AOP
+
+Aspect-Oriented Programming，面向方面编程，可以说是 OOP（Object-Oriented Programing，面向对象编程）的补充和完善。
+
+OOP 引入封装、继承和多态性等概念来建立一种对象层次结构，用以模拟公共行为的一个集合。当我们需要为分散的对象引入公共行为的时候，OOP 则显得无能为力。例如日志功能。日志代码往往水平地散布在所有对象层次中，而与它所散布到的对象的核心功能毫无关系。对于其他类型的代码，如：安全性、异常处理和透明的持续性也是如此。这种散布在各处的无关的代码被称为横切（cross-cutting）代码，在 OOP 设计中，它导致了大量代码的重复，而不利于各个模块的重用。
+
+而 AOP 技术则恰恰相反，它利用一种称为“横切”的技术，剖解开封装的对象内部，并将那些影响了多个类的公共行为封装到一个可重用模块，并将其名为“Aspect”，即方面。所谓“方面”，简单地说，就是将那些与业务无关，却为业务模块所共同调用的逻辑或责任封装起来，便于减少系统的重复代码，降低模块间的耦合度，并有利于未来的可操作性和可维护性。
+
+AOP的基本概念：
+
+1. 切面（Aspect）：官方的抽象定义为“一个关注点的模块化，这个关注点可能会横切多个对象”。
+2. 连接点（Joinpoint）：程序执行过程中的某一行为。
+3. 通知（Advice）：“切面”对于某个“连接点”所产生的动作。
+4. 切入点（Pointcut）：匹配连接点的断言，在 AOP 中通知和一个切入点表达式关联。
+5. 目标对象（Target Object）：被一个或者多个切面所通知的对象。
+6. AOP 代理（AOP Proxy）：在 Spring AOP 中有两种代理方式，JDK 动态代理和 CGLIB 代理。
+
+
+
+### 3. Advice
+
+什么是Advice？
+
+特定JoinPoint 处的Aspect 所采取的动作称为Advice。Spring AOP 使用一个Advice 作
+为拦截器，在JoinPoint “周围”维护一系列的拦截器。
+
+1. **前置通知**（Before advice）：在某连接点（JoinPoint）之前执行的通知，但这个通知不能阻止连接点前的执行。ApplicationContext 中在 < aop:aspect > 里面使用 < aop:before > 元素进行声明；
+2. **后置通知**（After advice）：当某连接点退出的时候执行的通知（不论是正常返回还是异常退出）。ApplicationContext 中在 < aop:aspect > 里面使用 < aop:after > 元素进行声明。
+3. **返回后通知**（After return advice ：在某连接点正常完成后执行的通知，不包括抛出异常的情况。ApplicationContext 中在 < aop:aspect > 里面使用 << after-returning >> 元素进行声明。
+4. **环绕通知**（Around advice）：包围一个连接点的通知，类似 Web 中 Servlet规范中的 Filter 的 doFilter 方法。可以在方法的调用前后完成自定义的行为，也可以选择不执行。ApplicationContext 中在 < aop:aspect > 里面使用 < aop:around > 元素进行声明。
+5. **抛出异常后通知**（After throwing advice）：在方法抛出异常退出时执行的通知。ApplicationContext 中在 < aop:aspect > 里面使用 < aop:after-throwing > 元素进行声明。
+
+
+
+
+
+### 4. 为什么使用IoC和AOP
+
+1. 假设没有IoC，用MVC的三层模型举例，DAO被Service调用，Service又被Controller调用，越是底层的模型就越是耦合，一个DAO可能被多个Service调用，一个Service又会被多个Controller调用，这是逻辑复用。
+
+   但是我们没有做到资源复用。上层调用下一层时，必然会持有下一层的对象引用，即成员变量，目前我们每一个成员变量都会实例化一个对象，每一个链路都创建了同样的对象，造成了极大的资源浪费。本应多个 Controller 复用同一个 Service，多个 Service 复用同一个 DAO。现在变成了一个 Controller创建多个重复的 Service，多个 Service 又创建了多个重复的 DAO。
+
+   许多组件只需要实例化一个对象就够了，创建多个没有任何意义。针对对象重复创建的问题，我们自然而然想到了单例模式。只要编写类时都将其写为单例，这样就避免了资源浪费。但是，引入设计模式必然会带来复杂性，况且还是每一个类都为单例，每一个类都会有相似的代码，其弊端不言自明。
+
+   当然，这些问题都可以引入设计模式来解决，不过这样一来又绕回去了：设计模式本身也会带来复杂性。这就像一种死循环：传统开发模式编码复杂，要想解决这种复杂却得陷入另一种复杂。难道没有办法解决了吗？当然不是的，在讲优秀解决方案前，我们先来梳理一下目前出现的问题：
+
+   - 创建了许多重复对象，造成大量资源浪费；
+   - 更换实现类需要改动多个地方；
+   - 创建和配置组件工作繁杂，给组件调用方带来极大不便。
+
+   透过现象看本质，这些问题的出现都是同一个原因：**组件的调用方参与了组件的创建和配置工作**。
+
+   其实调用方只需关注组件如何调用，至于这个组件如何创建和配置又与调用方有什么关系呢？就好比我去餐馆只需点菜，饭菜并不需要我亲自去做，餐馆自然会做好给我送过来。如果我们编码时，有一个「东西」能帮助我们创建和配置好那些组件，我们只负责调用该多好。这个「东西」就是容器。
+
+   我们到底为什么要用 IoC 和 AOP - 老刘的文章 - 知乎 https://zhuanlan.zhihu.com/p/349386138
+
+   Tomcat 是 Servlet 容器，只负责管理 Servlet。我们平常使用的组件则需要另一种容器来管理，这种容器我们称之为 **IoC 容器**。
+
+   控制反转，是指对象的创建和配置的控制权从调用方转移给容器。好比在家自己做菜，菜的味道全部由自己控制；去餐馆吃饭，菜的味道则是交由餐馆控制。IoC 容器就担任了餐馆的角色。
+
+   有了 IoC 容器，我们可以将对象交由容器管理，交由容器管理后的对象称之为 Bean。调用方不再负责组件的创建，要使用组件时直接获取 Bean 即可。
+
+   调用方只需按照约定声明依赖项，所需要的 Bean 就自动配置完毕了，就好像在调用方外部注入了一个依赖项给其使用，所以这种方式称之为 依赖注入（Dependency Injection，缩写为 DI）。**控制反转和依赖注入是一体两面，都是同一种开发模式的表现形式**。
+
+   IoC 轻而易举地解决了我们刚刚总结的问题：
+
+   对象交由容器管理后，默认是单例的，这就解决了资源浪费问题。
+
+   若要更换实现类，只需更改 Bean 的声明配置，即可达到无感知更换。
+
+2. AOP
+
+   当有重复代码出现时，可以就将其封装出来然后复用。我们通过分层、分包、分类来规划不同的逻辑和职责，就像之前讲解的三层架构。但这里的复用的都是**核心业务逻辑**，并不能复用一些**辅助逻辑**，比如：日志记录、性能统计、安全校验、事务管理，等等。但是这些业务内容往往贯穿全流程，传统的OOP无法封装。
+
+   OOP 是至上而下的编程方式，犹如一个树状图，A调用B、B调用C，或者A继承B、B继承C。这种方式对于业务逻辑来说是合适的，通过调用或继承以复用。而辅助逻辑就像一把闸刀横向贯穿所有方法。
+
+   横线切开，每一层都会执行相同的辅助逻辑，所以大家将这些辅助逻辑称为层面或者切面。
+
+   AOP 不是 OOP 的对立面，它是对 OOP 的一种补充。OOP 是纵向的，AOP 是横向的，**让我们能够不修改原有代码，便能让切面逻辑在所有业务逻辑中生效**。
+
+   我们只需声明一个切面，写上切面逻辑：
+
+   ```java
+   @Aspect // 声明一个切面
+   @Component
+   public class MyAspect {
+       // 原业务方法执行前
+       @Before("execution(public void com.rudecrab.test.service.*.doService())")
+       public void methodBefore() {
+           System.out.println("===AspectJ 方法执行前===");
+       }
+   
+       // 原业务方法执行后
+       @AfterReturning("execution(* com.rudecrab.test.service..doService(..))")
+       public void methodAddAfterReturning() {
+           System.out.println("===AspectJ 方法执行后===");
+       }
+   }
+   ```
+
+   无论你有一个业务方法，还是一万个业务方法，对我们开发者来说只需编写一次切面逻辑，就能让所有业务方法生效，极大提高了我们的开发效率。
+
+
+
+### 5. JDK中的静态代理
+
+JDK 动态代理最核心的一个接口和方法如下所示：
+
+1. java.lang.reflect中的**InvocationHandler**
+
+   ```java
+   public interface InvocationHandler {
+       public Object invoke(Object proxy, Method method, Object[] args)
+           throws Throwable;
+   }
+   ```
+
+   对于被代理的类的操作都会由该接口中的 invoke 方法实现，其中的参数的含义分别是：
+
+   1. proxy：被代理的类的实例；
+   2. method：调用被代理的类的方法；
+   3. args：该方法需要的参数。
+
+   测试实例：
+
+   ```java
+   public class ProxyHandler implements InvocationHandler {
+       private Object object;
+   
+       ProxyHandler(Object object) {
+           this.object = object;
+       }
+   
+       @Override
+       public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+           System.out.println("Before invoke "  + method.getName());
+           method.invoke(object, args);
+           System.out.println("After invoke " + method.getName());
+           return null;
+       }
+   }
+   ```
+
+   调用Proxy
+
+   ```java
+   public class DynamicProxyTest {
+       public static void main(String[] args) {
+           // System.getProperties().setProperty("sun.misc.ProxyGenerator.saveGeneratedFiles", "true");
+           IHello hello = new HelloImpl();
+           IBye bye = new ByeImpl();
+           InvocationHandler handler = new ProxyHandler(hello);
+           IHello proxyHello = (IHello) Proxy.newProxyInstance(hello.getClass().getClassLoader(), hello.getClass().getInterfaces(), handler);
+           proxyHello.sayHello();
+           InvocationHandler handlerBye = new ProxyHandler(bye);
+           IBye proxyBye = (IBye) Proxy.newProxyInstance(bye.getClass().getClassLoader(), bye.getClass().getInterfaces(), handlerBye);
+           proxyBye.sayBye();
+       }
+   }
+   ```
+
+2. java.lang.reflect 包中的 Proxy 类中的**newProxyInstance 方法**
+
+   ```java
+   public static Object newProxyInstance(ClassLoader loader,
+                                             Class<?>[] interfaces,
+                                             InvocationHandler h)
+           throws IllegalArgumentException{
+       
+   }
+   ```
+
+   其中的参数含义如下：
+
+   1. loader：被代理的类的类加载器；
+   2. interfaces：被代理类的接口数组；
+   3. invocationHandler：调用处理器类的对象实例
+
+   该方法会返回一个被修改过的类的实例，从而可以自由的调用该实例的方法。
+
+
+
+### 6. Bean的生命周期
+
+1. Spring启动之后，查找并加载需要被Spring管理的Bean，进行Bean的实例化。
+   1. 实例化BeanFactoryPostProcessor实现类，执行postProcessBeanFactory方法。
+   2. 实例化BeanPostProcessor实现类。
+   3. 实例化InstantiationAwareBeanPostProcessorAdaptor实现类，执行postProcessBeforeInstantiation方法。
+   4. 执行Bean的构造器，执行InstantiationAwareBeanPostProcessorAdaptor的postProcessPropertyValues方法。
+2. Bean实例化之后，将Bean的引用和值注入到Bean的属性中。
+   1. 调用BeanNameAware的setBeanName方法。
+   2. 调用BeanFactoryAware的setBeanFactory方法。
+   3. 执行BeanPostProcessor的postProcessBeforeInstantiation方法。
+   4. 调用InitializationBean的afterPropertiesSet方法。
+3. 调用<bean>的init-method属性指定的初始化方法。
+4. 执行BeanPostProcessor的postProcessorAfterInitialization方法。
+5. 容器初始化成功，执行正常调用。
+6. 销毁容器。
+7. 调用DisposibleBean的destory方法。
+8. 调用<bean>的destory-method的指定的销毁bean的方法。
+
+[Spring Bean的生命周期（非常详细） - Chandler Qian - 博客园 (cnblogs.com)](https://www.cnblogs.com/zrtqsk/p/3735273.html)
+
+
+
+### 7. Bean的作用域
+
+Spring框架支持5种作用域，有三种作用域是当开发者使用基于web的ApplicationContext的时候才生效的。下面就是Spring直接支持的作用域了，当然开发者也可以自己定制作用域。
+
+| 作用域                   | 描述                                                         |
+| ------------------------ | ------------------------------------------------------------ |
+| 单例(singleton)          | （默认）每一个Spring IoC容器都拥有唯一的一个实例对象         |
+| 原型(prototype)          | 一个Bean定义，任意多个对象                                   |
+| 请求(request)            | 在一次 HTTP 请求中，容器会返回该 Bean 的同一个实例。而对不同的 HTTP 请求，会返回不同的实例，该作用域仅在当前 HTTP Request 内有效。 |
+| 会话(session)            | 在一次 HTTP Session 中，容器会返回该 Bean 的同一个实例。而对不同的 HTTP 请求，会返回不同的实例，该作用域仅在当前 HTTP Session 内有效。 |
+| 全局会话(global session) | 在一个全局的 HTTP Session 中，容器会返回该 Bean 的同一个实例。该作用域仅在使用 portlet context 时有效。 |
+
+
+
+### 8. 单例的线程安全问题
+
+
 
 
 
