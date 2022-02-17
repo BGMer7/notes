@@ -3144,7 +3144,9 @@ File f = new File("C:\\Windows\\notepad.exe");
 
 File对象有三种形式表示路径，一种是`getPath()`，将会返回构造方法传入的路径，
 
-一种是`getAbsolutePath()`，返回绝对路径
+一种是`getAbsolutePath()`，返回绝对路径，
+
+一种是`getCanonicalPath()`，返回规范路径。
 
 
 
