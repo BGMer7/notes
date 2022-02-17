@@ -816,11 +816,144 @@ location / {
 
 下面将介绍联邦扩容的配置方法，我在这里建议，在第一次搭建MinIO集群的时候，即使只有一个集群，也要引入etcd，方便以后扩容。
 
-1、资源分配
+##### **1、资源分配**
 
 我们假定正式环境中，先创建了一个MinIO集群，并且引入etcd。而后又有了扩容的需求，需要向联邦中添加新一个的集群。
 
+**etcd集群**
 
+etcd是一个开源的分布式键值对存储服务，在联邦中用于记录bucket的IP地址，联邦内的各个集群的数据存储以及一致性维护仍然由各个集群自行管理，联邦只是对外提供一个整体逻辑视图。通过连接到联邦中任一集群的任一节点，可以查询并访问联邦内所有集群的全部数据。
+
+当一个应用访问MinIO的时候，联邦通过etcd定位到bucket实际所在的集群，在进行数据访问，联邦对外屏蔽了bucket的IP查找和定位过程，在逻辑上形成统一的整体提供服务。你可以理解为etcd实现了类似路由寻址的功能。
+
+为了避免单点故障，etcd集群建议配置为三个节点。
+
+| Name  | IP             |
+| :---- | :------------- |
+| etcd1 | 192.168.88.100 |
+| etcd2 | 192.168.88.101 |
+| etcd3 | 192.168.88.102 |
+
+**MinIO集群1**
+
+首次创建的集群为4个节点，4块硬盘。
+
+| Host   | Address       | Disk             |
+| :----- | :------------ | :--------------- |
+| minio1 | 192.168.88.11 | /data/minio_data |
+| minio2 | 192.168.88.12 | /data/minio_data |
+| minio3 | 192.168.88.13 | /data/minio_data |
+| minio4 | 192.168.88.14 | /data/minio_data |
+
+**MinIO集群2**
+
+第二次创建的，用于扩容的集群为2个节点，4块硬盘。
+
+| Host   | Address       | Disk                    |
+| :----- | :------------ | :---------------------- |
+| minio1 | 192.168.88.20 | /data/minio_data{1...2} |
+| minio2 | 192.168.88.21 | /data/minio_data{1...2} |
+
+##### 2、etcd集群部署
+
+> etcd部署见Distributed System.md
+
+CentOS可直接使用Yum进行安装，这里也以此为例。没有网络的环境下，也可以下载[etcd发行版](http://github.com/etcd-io/etcd/releases)或者RPM包进行手动安装。
+
+```
+yum install -y etcd
+```
+
+修改配置文件`/etc/etcd/etcd.conf`，以**etcd1**为例。
+
+```
+#[Member]
+ETCD_DATA_DIR="/var/lib/etcd/default.etcd"
+ETCD_LISTEN_PEER_URLS="http://0.0.0.0:2380"
+ETCD_LISTEN_CLIENT_URLS="http://0.0.0.0:2379"
+ETCD_NAME="etcd1"
+
+#[Clustering]
+ETCD_INITIAL_ADVERTISE_PEER_URLS="http://192.168.100:2380"
+ETCD_ADVERTISE_CLIENT_URLS="http://192.168.100:2379"
+ETCD_INITIAL_CLUSTER="etcd1=http://192.168.100:2380,etcd2=http://192.168.101:2380,etcd3=http://192.168.102:2380"
+ETCD_INITIAL_CLUSTER_TOKEN="etcd-cluster"
+ETCD_INITIAL_CLUSTER_STATE="new"
+```
+
+> ETCD_DATA_DIR=数据存放位置
+>
+> ETCD_LISTEN_PEER_URLS=监听的etcd节点URL，最好是指填写本集群内的所有节点，0.0.0.0表示监听全部地址
+>
+> ETCD_LISTEN_CLIENT_URLS=监听的客户端URLs，最好填写MinIO集群的地址，只允许MinIO访问，但是考虑到未来扩容，这里监听全部
+>
+> ETCD_NAME=etcd节点的名称，需要唯一
+>
+> ETCD_INITIAL_ADVERTISE_PEER_URLS=广播节点URL
+> ETCD_ADVERTISE_CLIENT_URLS=广播客户端URL
+> ETCD_INITIAL_CLUSTER=集群内所有节点
+> ETCD_INITIAL_CLUSTER_TOKEN=令牌，每个节点需要相同
+> ETCD_INITIAL_CLUSTER_STATE=集群状态
+
+所有的节点都进行上述配置。参数`ETCD_INITIAL_CLUSTER`填写的节点信息，必须与各节点上配置的`ETCD_NAME`参数以及`ETCD_INITIAL_ADVERTISE_PEER_URLS`参数进行对应。
+
+配置完成后，在各节点启动etcd。
+
+```
+systemctl start etcd
+systemctl enable etcd
+```
+
+在任意一个节点上，输入如下命令查看集群状态。
+
+```
+etcdctl member list
+```
+
+应该能看到有三个节点，说明集群运行正常。
+
+##### 3、使用联邦模式配置MinIO集群1
+
+MinIO单个集群的部署按照之前的步骤自行部署，这里不再赘述。唯一不同的是启动MinIO集群的脚本需要添加如下配置。所以我想聪明的你一定能想到，可以只接修改之前的集群来支持联邦模式，只不过这样需要重启整个集群，这在生产环境中是非常不方便的。所以还是建议，在一开始就配置好。
+
+```
+export MINIO_ACCESS_KEY=minio
+export MINIO_SECRET_KEY=test@minio
+
+export MINIO_ETCD_ENDPOINTS="http://192.168.88.100:2379,http://192.168.88.101:2379,http://192.168.88.102:2379"
+export MINIO_PUBLIC_IPS=192.168.88.11,192.168.88.12,192.168.88.13,192.168.88.14
+export MINIO_DOMAIN=cluster1.minio.com
+
+/opt/minio/minio server http://192.168.88.{11...14}/data/minio_data
+```
+
+**注意：**`MINIO_ETCD_ENDPOINTS`参数需与搭建的ETCD集群所有节点IP相对应；`MINIO_PUBLIC_IPS`参数则为该集群的所有节点IP；`MINIO_DOMAIN`参数必须进行配置，即使你并不通过域名访问存储桶，否则联邦无法生效，只有`MINIO_DOMAIN`参数值相同的集群，才会组成联盟。
+
+##### 4、将MinIO集群2加入联邦
+
+集群2中的各个节点进行同样的配置，启动后，进行如下测试。
+
+- 首先连接至集群1中的任一节点，创建Bucket，名称自定义，上传一个对象。
+- 连接至任一etcd节点，通过`ETCDCTL_API=3 etcdctl get --from-key ''`命令查看etcd中是否已经写入刚刚创建的Bucket的相关记录
+- 最后连接至集群2中的任一节点，查看能否访问到刚刚在集群1中创建的Bucket以及上传的对象。
+
+如果一切正常，说明联邦模式创建成功。
+
+##### 5、后续的扩容
+
+后续若需进行扩容，只需要将新创建的集群，加入现有的etcd服务，这些集群将自动加入联邦，从而实现集群的无限扩展。
+
+最后我还是建议优先考虑联邦扩容，并且首次进行单个集群部署时就引入etcd联邦模式，这样后续进行联邦扩容时能简化很多流程。
+
+除非你真的确定，比如原集群节点数和磁盘数较少、系统数据量增长较慢、后续扩容操作不频繁、服务可中断的情况下，可考虑对等扩容
+
+##### 6、其他
+
+为了安全，生产可能需要关闭自带的浏览器，在配置文件添加参数。
+
+```
+MINIO_BROWSER=off
+```
 
 
 
