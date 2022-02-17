@@ -3113,6 +3113,43 @@ public class Main {
 
 
 
+## I/O
+
+### File
+
+在计算机系统中，文件是一个很重要的存储方式，Java的标准库java.io提供了File对象来操作文件和目录。
+
+要构造一个File对象，需要传入文件的路径。
+
+```java 
+import java.io.*;
+
+public class Main {
+    public static void main(String[] args) {
+        File f = new File("C:\\Windows\\notepad.exe");
+        System.out.println(f);
+    }
+}
+```
+
+构造File对象的时候，可以传入绝对路径，也可以传入相对路径。
+
+绝对路径是以根目录开头的完整路径，例如：
+
+```Java
+File f = new File("C:\\Windows\\notepad.exe");
+```
+
+注意Windows平台使用`\`作为路径分隔符，在Java字符串中需要用\\\表示一个 \\。Linux平台使用`/`作为路径分隔符。
+
+File对象有三种形式表示路径，一种是`getPath()`，将会返回构造方法传入的路径，
+
+一种是`getAbsolutePath()`，返回绝对路径
+
+
+
+
+
 
 
 ## Generic
@@ -5305,7 +5342,7 @@ i=2 -> h = 31 * (31 * (31 * 0 + val[0]) + val[1]) + val[2]
 >    ```
 >    Prime numbers are chosen to best distribute data among hash buckets.  
 >    If the distribution of inputs is random and evenly spread, then the  choice of the hash code/modulus does not matter. It only has an impact  when there is a certain pattern to the inputs.
->                   
+>                      
 >    This is often the case when dealing with memory locations. 
 >    For  example, all 32-bit integers are aligned to addresses divisible by 4.  
 >    Check out the table below to visualize the effects of using a prime vs.  non-prime modulus:
