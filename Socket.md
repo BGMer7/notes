@@ -1,5 +1,7 @@
 # Socket
 
+[Linux Howtos: C/C++ -> Sockets Tutorial](https://www.linuxhowtos.org/C_C++/socket.htm)
+
 在Unix/Linux系统中，所有的东西都被抽象为文件。为了简化接口，所有的硬件也都被简化为文件。对于这些文件的操作等同于对于硬盘中的文件的操作。
 
 为了区分已经打开了的和没有打开的文件，Linux引入了文件描述符的概念（file descriptor）
