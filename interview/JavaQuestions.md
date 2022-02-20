@@ -1790,23 +1790,366 @@ Spring框架支持5种作用域，有三种作用域是当开发者使用基于w
 
 ### 8. 单例的线程安全问题
 
+[Spring 中的bean 是线程安全的吗？ - myseries - 博客园 (cnblogs.com)](https://www.cnblogs.com/myseries/p/11729800.html)
+
+Spring中的Bean是否线程安全，首先容器本身并没有提供相关的安全策略，所以Spring容器中的Bean本身是不具备线程安全的，但是要根据不同的作用域进行分析。
+
+已知Bean的作用域有五个，见上一个问题：
+
+Spring 的 bean 作用域（scope）类型
+　　1、singleton:单例，默认作用域。
+
+　　2、prototype:原型，每次创建一个新对象。
+
+　　3、request:请求，每次Http请求创建一个新对象，适用于WebApplicationContext环境下。
+
+　　4、session:会话，同一个会话共享一个实例，不同会话使用不用的实例。
+
+　　5、global-session:全局会话，所有会话共享一个实例。
+
+
+
+线程安全这个问题，要从单例与原型Bean分别进行说明。
+
+原型Bean
+　　对于原型Bean,每次创建一个新对象，也就是线程之间并不存在Bean共享，自然是不会有线程安全的问题。
+
+但是针对单例的Bean，其实是线程不安全的，因为所有的进程都在争用这个资源。
+
+如果单例Bean,是一个无状态Bean，也就是线程中的操作不会对Bean的成员执行**查询**以外的操作，那么这个单例Bean是线程安全的。比如Spring mvc 的 Controller、Service、Dao等，这些Bean大多是无状态的，只关注于方法本身。
+
+Spring中的Bean默认是单例模式的，框架并没有对bean进行多线程的封装处理。
+
+实际上大部分时间Bean是无状态的（比如Dao） 所以说在某种程度上来说Bean其实是安全的。
+
+但是如果Bean是有状态的 那就需要开发人员自己来进行线程安全的保证，最简单的办法就是改变bean的作用域 把 "singleton"改为’‘protopyte’ 这样每次请求Bean就相当于是 new Bean() 这样就可以保证线程的安全了。
+
+> 有状态就是有数据存储功能
+> 无状态就是不会保存数据
+
+controller、service和dao层本身并不是线程安全的，只是如果只是调用里面的方法，而且多线程调用一个实例的方法，会在内存中复制变量，这是自己的线程的工作内存，是安全的。
+
+所以其实任何无状态单例都是线程安全的。**Spring的根本就是通过大量这种单例构建起系统，以事务脚本的方式提供服务**
+
+
+
+### 9. Controller、Service的线程安全
+
+首先问@Controller @Service是不是线程安全的？
+答：默认配置下不是的。为啥呢？因为默认情况下@Controller没有加上@Scope，没有加@Scope就是默认值singleton，单例的。意思就是系统只会初始化一次Controller容器，所以每次请求的都是同一个Controller容器，当然是非线程安全的。
+
+```java
+@RestController
+public class TestController {
+
+    private int var = 0;
+    
+    @GetMapping(value = "/test_var")
+    public String test() {
+        System.out.println("普通变量var:" + (++var));
+        return "普通变量var:" + var ;
+    }
+}
+```
+
+通过请求连发三次，输出结果如下：
+
+```java
+在postman里面发三次请求，结果如下：
+普通变量var:1
+普通变量var:2
+普通变量var:3
+```
+
+说明这不是线程安全的。
+
+使用上文提到的方法改变作用域，@Scope，将作用域由单例变成原型，
+
+```java 
+@RestController
+@Scope(value = "prototype") // 加上@Scope注解，他有2个取值：单例-singleton 多实例-prototype
+public class TestController {
+
+    private int var = 0;
+    
+    @GetMapping(value = "/test_var")
+    public String test() {
+        System.out.println("普通变量var:" + (++var));
+        return "普通变量var:" + var ;
+    }
+}
+```
+
+这样一来，每个请求都单独创建一个Controller容器，所以各个请求之间是线程安全的，三次请求结果：
+
+```
+普通变量var:1
+普通变量var:1
+普通变量var:1
+```
+
+但是改了作用域之后还是存在问题，如果这个类中带有静态变量怎么办？
+
+```java 
+@RestController
+@Scope(value = "prototype") // 加上@Scope注解，他有2个取值：单例-singleton 多实例-prototype
+public class TestController {
+    private int var = 0;
+    private static int staticVar = 0;
+
+    @GetMapping(value = "/test_var")
+    public String test() {
+        System.out.println("普通变量var:" + (++var)+ "---静态变量staticVar:" + (++staticVar));
+        return "普通变量var:" + var + "静态变量staticVar:" + staticVar;
+    }
+}
+```
+
+那么创建实例是没有办法管理静态变量的。
+
+再尝试使用ThreadLocal的方法，
+
+```java 
+@RestController
+@Scope(value = "singleton") // prototype singleton
+public class TestController {
+
+    private int var = 0; // 定义一个普通变量
+
+    private static int staticVar = 0; // 定义一个静态变量
+
+    @Value("${test-int}")
+    private int testInt; // 从配置文件中读取变量
+
+    ThreadLocal<Integer> tl = new ThreadLocal<>(); // 用ThreadLocal来封装变量
+
+    @Autowired
+    private User user; // 注入一个对象来封装变量
+
+    @GetMapping(value = "/test_var")
+    public String test() {
+        tl.set(1);
+        System.out.println("先取一下user对象中的值："+user.getAge()+"===再取一下hashCode:"+user.hashCode());
+        user.setAge(1);
+        System.out.println("普通变量var:" + (++var) + "===静态变量staticVar:" + (++staticVar) + "===配置变量testInt:" + (++testInt)
+                + "===ThreadLocal变量tl:" + tl.get()+"===注入变量user:" + user.getAge());
+        return "普通变量var:" + var + ",静态变量staticVar:" + staticVar + ",配置读取变量testInt:" + testInt + ",ThreadLocal变量tl:"
+                + tl.get() + "注入变量user:" + user.getAge();
+    }
+}
+```
+
+
+
+补充Controller以外的代码：
+config里面自己定义的Bean:User
+
+```java 
+@Configuration
+public class MyConfig {
+    @Bean
+    public User user(){
+        return new User();
+    }
+}
+```
+
+三次请求得到的结果是：
+
+```
+先取一下user对象中的值：0===再取一下hashCode:241165852
+普通变量var:1===静态变量staticVar:1===配置变量testInt:1===ThreadLocal变量tl:1===注入变量user:1
+先取一下user对象中的值：1===再取一下hashCode:241165852
+普通变量var:2===静态变量staticVar:2===配置变量testInt:2===ThreadLocal变量tl:1===注入变量user:1
+先取一下user对象中的值：1===再取一下hashCode:241165852
+普通变量var:3===静态变量staticVar:3===配置变量testInt:3===ThreadLocal变量tl:1===注入变量user:1
+```
+
+可以看到，**在单例模式下Controller中只有用ThreadLocal封装的变量是线程安全的**。
+
+为什么这样说呢？我们可以看到3次请求结果里面只有ThreadLocal变量值每次都是从0+1=1的，其他的几个都是累加的，而user对象呢，默认值是0，第二交取值的时候就已经是1了，**关键他的hashCode是一样的，说明每次请求调用的都是同一个user对象。**
+
+下面将TestController 上的@Scope注解的属性改一下改成多实例的：@Scope(value = "prototype")，其他都不变，再次请求，结果如下：
+
+```
+先取一下user对象中的值：0===再取一下hashCode:853315860
+普通变量var:1===静态变量staticVar:1===配置变量testInt:1===ThreadLocal变量tl:1===注入变量user:1
+先取一下user对象中的值：1===再取一下hashCode:853315860
+普通变量var:1===静态变量staticVar:2===配置变量testInt:1===ThreadLocal变量tl:1===注入变量user:1
+先取一下user对象中的值：1===再取一下hashCode:853315860
+普通变量var:1===静态变量staticVar:3===配置变量testInt:1===ThreadLocal变量tl:1===注入变量user:1
+```
+
+分析这个结果发现，多实例模式下普通变量，取配置的变量还有ThreadLocal变量都是线程安全的，而静态变量和user（看他的hashCode都是一样的）对象中的变量都是非线程安全的。也就是说尽管TestController 是每次请求的时候都初始化了一个对象，但是静态变量始终是只有一份的，而且这个注入的user对象也是只有一份的。静态变量只有一份这是当然的咯，那么有没有办法让user对象可以每次都new一个新的呢？当然可以：
+
+```java 
+public class MyConfig {
+    @Bean
+    @Scope(value = "prototype")
+    public User user(){
+        return new User();
+    }    
+}
+```
+
+这样的话
+
+```
+先取一下user对象中的值：0===再取一下hashCode:1612967699
+普通变量var:1===静态变量staticVar:1===配置变量testInt:1===ThreadLocal变量tl:1===注入变量user:1
+先取一下user对象中的值：0===再取一下hashCode:985418837
+普通变量var:1===静态变量staticVar:2===配置变量testInt:1===ThreadLocal变量tl:1===注入变量user:1
+先取一下user对象中的值：0===再取一下hashCode:1958952789
+普通变量var:1===静态变量staticVar:3===配置变量testInt:1===ThreadLocal变量tl:1===注入变量user:1
+```
+
+可以看到每次请求的user对象的hashCode都不是一样的，每次赋值前取user中的变量值也都是默认值0。
+
+下面总结一下：
+
+　　1、在@Controller/@Service等容器中，默认情况下，scope值是单例-singleton的，也是线程不安全的。
+　　2、尽量不要在@Controller/@Service等容器中定义静态变量，不论是单例(singleton)还是多实例(prototype)他都是线程不安全的。
+　　3、默认注入的Bean对象，在不设置scope的时候他也是线程不安全的。
+　　4、**一定要定义变量的话，用ThreadLocal来封装，这个是线程安全的**
+
+
+
+### 10. 对Spring中事务的理解
+
+事务是逻辑上的一组操作，要么都执行，要么都不执行。
+
+- 原子性：事务是最小的执行单位，不允许分割。事务的原子性确保动作要么全部完成，要么完全不起作用；
+- 一致性：执行事务前后，数据保持一致；
+- 隔离性：并发访问数据库时，一个用户的事物不被其他事物所干扰，各并发事务之间数据库是独立的；
+- 持久性：一个事务被提交之后。它对数据库中数据的改变是持久的，即使数据库发生故障也不应该对其有任何影响。
+
+Spring 支持编程式事务管理和声明式事务管理两种方式：
+
+声明式事务：
+
+```java 
+作者：白苏
+链接：https://zhuanlan.zhihu.com/p/260517060
+来源：知乎
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+
+@Service
+public class PersonService {
+    @Resource
+    private PersonMapper personMapper;
+   
+    @Resource
+    private CompanyMapper companyMapper;
+    
+    //rollbackFor：触发回滚的异常，默认是RuntimeException和Error
+    //isolation: 事务的隔离级别，默认是Isolation.DEFAULT也就是数据库自身的默认隔离级别
+    @Transactional(rollbackFor = {RuntimeException.class, Error.class})
+    public void saveOne(Person person) {
+        Company company = new Company();
+        company.setName("tenmao:" + person.getName());
+        companyMapper.insertOne(company);
+        personMapper.insertOne(person);
+    }
+}
+```
+
+
+
+编程式事务：
+
+手动开启、提交、回滚事务。
+
+Spring 编程式事务实现需要在配置文件中配置相应的事务处理器，用 AOP、事务标签、注解方式实现事务。
+
+```java 
+<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+     <property name="dataSource" ref="dataSource" />
+</bean>
+
+作者：白苏
+链接：https://zhuanlan.zhihu.com/p/260517060
+来源：知乎
+著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
+```
 
 
 
 
 
+### 11. Spring的事务传播行为
+
+所谓事务传播特性就是多个事务方法相互调用时，事务如何在这些方法间传播。
+
+1. PROPAGATION_REQUIRED：如果当前没有事务，就新建一个事务，如果已经存在一个事务中，加入到这个事务中。这是最常见的。 
+2. PROPAGATION_SUPPORTS：支持当前事务，如果当前没有事务，就以非事务方式执行。  
+3. PROPAGATION_MANDATORY：支持当前事务，如果当前没有事务，就抛出异常。 
+4. PROPAGATION_REQUIRES_NEW：新建事务，如果当前存在事务，把当前事务挂起。  
+5. PROPAGATION_NOT_SUPPORTED：以非事务方式执行操作，如果当前存在事务，就把当前事务挂起。  
+6. PROPAGATION_NEVER：以非事务方式执行，如果当前存在事务，则抛出异常。
+7. PROPAGATION_NESTED：如果当前存在事务，则在嵌套事务内执行，如果当前没有事务，则执行1。
+
+虽然有7种，但是常用的就第一种REQUIRED和第四种REQUIRES_NEW
+
+
+为什么Spring可以让事务进行传播呢：看了源码我们就明白了
+
+由于Spring的事务管理是通过线程相关的ThreadLocal来保存数据访问基础设施的（Connection对象），再结合IoC和AOP实现高级声明式事务的功能，所以Spring的事务天然的和线程有着千丝万缕的关系。
+
+Spring通过ThreadLocal可以将大部分Bean无状态化（线程安全的）所以Spring中单实例Bean对线程安全问题拥有一种天然的免疫力。
+
+所以Spring中DAO和Service都以单实例的方式存在，Spring将有状态的变量（Connection）本地线程化，达到另一个层面上的线程无关，从而实现线程无关。
+
+总结：在相同的线程中进行相互嵌套调用的事务方法工作于相同的事务中，不同的线程中，则各自独立工作与独立的事务中。
 
 
 
+### 12. Spring的事务隔离级别
+
+1. ISOLATION_DEFAULT：这是个PlatfromTransactionManager 默认的隔离级别，使用数据库默认的事务隔离级别。
+2. ISOLATION_READ_UNCOMMITTED：读未提交，允许另外一个事务可以看到这个事务未提交的数据。
+3. ISOLATION_READ_COMMITTED：读已提交，保证一个事务修改的数据提交后才能被另一事务读取，而且能看到该事务对已有记录的更新。
+4. ISOLATION_REPEATABLE_READ：可重复读，保证一个事务修改的数据提交后才能被另一事务读取，但是不能看到该事务对已有记录的更新。
+5. ISOLATION_SERIALIZABLE：一个事务在执行的过程中完全看不到其他事务对数据库所做的更新。
+
+更多关于Spring框架知识可以看教程
 
 
 
+### 13. Spring常用的注入方法
+
+1. 构造器依赖注入：构造器依赖注入（DI）通过容器触发一个类的构造器来实现，该类有一系列参数，每个参数代表一个其他类的依赖。
+2. Setter方法注入：Setter 方法注入是容器通过调用无参构造器或无参 static 工厂方法实例化 bean 之后，调用该 bean 的 Setter 方法，即实现了基于 Setter 的依赖注入。
+3. 基于注解的注入：最好的解决方案是用构造器参数实现强制依赖，Setter 方法实现可选依赖。
 
 
 
+### 14. Spring中常用的设计模式
+
+1. 工厂设计模式：spring使用工程模式通过BeanFactory、ApplicationContext创建Bean对象
+2. 代理设计模式：Spring AOP
+3. 单例设计模式：Spring中的Bean默认都是单例模式
+4. 模板设计模式：Spring中的JdbcTemplate、hibernateTemplate等以Template结尾的对数据库操作的库
+5. 包装器设计模式：我们的项目需要连接多个数据库，而且不同的客户在每次访问中根据需
+   要会去访问不同的数据库。这种模式让我们可以根据客户的需求能够动态切换不同的数据
+   源。
+6. 观察者模式：Spring 事件驱动模型就是观察者模式很经典的一个应用
+7. 适配器模式：Spring AOP 的增强或通知(Advice)使用到了适配器模式、spring MVC 中也是用到了适配器模式适配Controller
 
 
 
+### 15. Spring MVC的理解
+
+MVC是model-view-controller的简称，是一种架构模式，这种架构模式分离了表现和交互。
+
+MVC被分为三个部件，也就是名字体现出来的部件：模型、试图、控制器。
+
+- Model：模型是程序的主体部分，主要包括业务数据和业务逻辑，在模型层会涉及用户发布的服务，在服务中会根据不同的业务需求，跟新业务模型中的数据。
+- View：视图是用户和程序交互的接口，用户会根据具体的业务需求，在视图界面输入自己的特定的业务数据，并且通过自己的界面的时间交互，将对应的输入参数提交给后台的控制器进行处理。
+- Controller：控制器负责接收用户输入进来的参数，以及更新业务模型的部分。控制器中接受了用户与界面交互时传过来的数据，并且负责将用户输入的数据根据业务逻辑执行服务的调用、更新业务中的数据。
+
+
+
+### 16. Spring MVC的执行流程
 
 
 
