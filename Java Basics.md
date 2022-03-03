@@ -2639,7 +2639,15 @@ class ListCompare {
 
 
 
+### Queue
 
+
+
+
+
+### Deque
+
+Deque是指双端队列，含义是Double End Queue，即双端队列，既可以当作栈使用，也可以当作队列使用。
 
 
 
@@ -3464,6 +3472,27 @@ public void writeFile() throws IOException {
         output.write("Hello".getBytes("UTF-8")); // Hello
     } // 编译器在此自动为我们写入finally并调用close()
 }
+```
+
+
+
+
+
+## JDBC
+
+程序运行的时候，数据都是在内存中的。当程序终止的时候，通常都需要将数据保存到磁盘上，无论是保存到本地磁盘，还是通过网络保存到服务器上，最终都会将数据写入磁盘文件。
+
+> 涉及到MySQL的安装参见《Database.md》-Linux(CentOS 7)安装MySQL
+
+JDBC的全称是Java DataBase Connectivity。
+
+```java
+<dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+    <version>5.1.47</version>
+    <scope>runtime</scope>
+</dependency>
 ```
 
 
@@ -5660,7 +5689,7 @@ i=2 -> h = 31 * (31 * (31 * 0 + val[0]) + val[1]) + val[2]
 >    ```
 >    Prime numbers are chosen to best distribute data among hash buckets.  
 >    If the distribution of inputs is random and evenly spread, then the  choice of the hash code/modulus does not matter. It only has an impact  when there is a certain pattern to the inputs.
->                            
+>                                  
 >    This is often the case when dealing with memory locations. 
 >    For  example, all 32-bit integers are aligned to addresses divisible by 4.  
 >    Check out the table below to visualize the effects of using a prime vs.  non-prime modulus:
