@@ -660,11 +660,103 @@ public class XXXController{
 
 ## rules
 
+### RESTful统一规范响应数据格式
 
+**REST是Representational State Transfer**的缩写，是在2000年被Roy Thomas Fielding提出的，Fielding是一个很厉害的人物，他是HTTP协议的主要设计者。REST是他对互联网软件构架的原则。**REST是一种针对网络应用设计和软件开发方式，降低了开发的复杂性，提高了系统的可伸缩性**。
 
+我们在开发过程中需要有一个统一的数据返回格式，这样可以使得所有开发人员返回结果风格统一，减少前后端开发人员的沟通时间。REST只是一种标准化的开发约定，下面我们提供一个通过返回结果的实现。
 
+一个常用的Result类·
 
-### 
+```Java
+@Data
+public class Result<T> {
+    // 调用成功或者失败
+    private Integer code = 0;
+    // 需要传递的信息，例如错误信息
+    private String msg;
+    private T data;
+    
+   	public Result() {}
+    
+    public Result(Integer code, String msg, T data) {
+        this.code = code;
+        this.msg = msg;
+        this.data = data;
+    }
+    
+    public String toString() {
+        return "code = " + code + ", msg = " + msg + ", data = " + data.toString();
+    }
+}
+```
+
+一个enum枚举类，定义
+
+```java 
+public enum ResultEnum {
+    //这里是可以自己定义的，方便与前端交互即可
+    UNKNOWN_ERROR(-1,"未知错误"),
+    SUCCESS(10000,"成功"),
+    USER_NOT_EXIST(1,"用户不存在"),
+    USER_IS_EXISTS(2,"用户已存在"),
+    DATA_IS_NULL(3,"数据为空"),
+    
+    private Integer code;
+    private String msg;
+ 
+    ResultEnum(Integer code, String msg) {
+        this.code = code;
+        this.msg = msg;
+    }
+ 
+    public Integer getCode() {
+        return code;
+    }
+ 
+    public String getMsg() {
+        return msg;
+    }
+}
+```
+
+以及一个常用的ResultUtil
+
+```java 
+public class ResultUtil {
+ 
+    /**成功且带数据**/
+    public static Result success(Object object){
+        Result result = new Result();
+        result.setCode(ResultEnum.SUCCESS.getCode());
+        result.setMsg(ResultEnum.SUCCESS.getMsg());
+        result.setData(object);
+        return result;
+    }
+    /**成功但不带数据**/
+    public static Result success(){
+ 
+        return success(null);
+    }
+    /**失败**/
+    public static Result error(Integer code,String msg){
+        Result result = new Result();
+        result.setCode(code);
+        result.setMsg(msg);
+        return result;
+    }
+}
+```
+
+在controller中加入返回Result的方法
+
+```java @GetMapping("/test")
+@ResponseBody
+public Result test() throws Exception{
+    String str = "程序猿最帅";
+    return ResultUtil.success(str);
+}
+```
 
 
 
