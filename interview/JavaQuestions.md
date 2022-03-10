@@ -2149,7 +2149,120 @@ MVC被分为三个部件，也就是名字体现出来的部件：模型、试�
 
 
 
-### 16. Spring MVC的执行流程
+### 18. Spring MVC的核心组件
+
+- DispatcherServlet 控制器入口 负责分发请求
+- HandlerMapping 负责根据请求 找到对应的控制器
+- Controller 真正处理请求的控制器
+- ModelAndView 封装数据信息和视图信息的
+- ViewResolver 视图处理器 通过处理找到对应的页面
+
+
+
+1. 前端控制器：DispatcherServlet（调度程序）
+
+   Spring的前端的入口函数。用来接受请求、响应结果相当于转发器，中央处理器，有了DS，可以大大减少其他组件之间的耦合。
+
+2. 处理器映射器：HandlerMapping（负责找到Controller）
+
+   根据请求的url查找Handler，HandlerMapping负责根据用户的请求找到对应的Controller，Spring MVC提供了不同的映射器实现不同的映射方式，例如：配置文件方式、实现接口方式、注解方式。
+
+3. 处理器适配器：HandlerAdapter（负责找到Controller中对应的方法）
+
+   按照特定的规则（HandlerAdapter所规定的规则）去执行Handler。
+
+4. 处理器：Handler
+
+   编写 Handler 时按照 HandlerAdapter 的要求去做，这样适配器才可以去正确执行 Handler.Handler 是继 DispatcherServlet 前端控制器的后端控制器，在 DispatcherServlet 的控制下 Handler 对具体的用户请求进行处理.由于 Handler 涉及到具体的用户业务请求，所以一般情况需要工程师根据业务需求开发Handler
+
+5. 视图解析器：ViewResolver
+   
+   进行视图解析，根据逻辑视图名解析成真正的视图（View）
+   
+
+
+
+注意：处理器 Handler（也就是我们平常说的 Controller 控制器）以及视图层 View 都是需要我们自己手动开发的.其他的一些组件比如：前端控制器 DispatcherServlet、处理器映射器 HandlerMapping、处理器适配器 HandlerAdapter 等等都是框架提供给我们的，不需要自己手动开发。
+
+
+
+### 17. Spring MVC的执行流程
+
+首先分析Spring MVC的原理，当请求到来的时候，第一个接受这个请求的前端控制器叫DispatcherServlet，后端的控制器是Controller，前端请求和后端的控制需要通过一个映射HandlerMapping，负责业务逻辑处理的模型对象一般也是我们平常写的DAO/DTO组件。只是它最后的返回更灵活，Controller返回一个ModelAndView对象给DispatcherServlet，ModelAndView可以携带一个视图对象，也可以携带一个视图对象的逻辑名。最后，DispatcherServlet将请求分派给ModelAndView对象指定的视图对象。视图对象负责渲染返回给客户的回应。
+
+
+
+更加具体的工作流程是：
+
+①当用户在浏览器中点击一个链接或者提交一个表单时，那么就会产生一个请求（request）。当请求离开浏览器时，它会携带用户请求的信息（比如说请求的URL信息，用户名，密码什么的）。
+
+②请求的第一站到达的是Spring的DispatcherServlet，它是一个前端控制器，工作是将用户的请求委托给其他的组件（这里是交给Spring MVC的控制器）去处理。这里DispatcherServlet要决定将请求传给哪一个控制器（Controller）去处理，那么这时就需要处理器映射（Handler Mapping）了。处理器映射会看请求的URL信息，然后决定将请求交给哪一个控制器去处理。比如说有两个控制器ControllerA和ControllerB，分别处理后缀名为.html和.jsp送来的请求，那么当请求者的后缀名为.html时，那么DispatcherServlet就将请求交给ControllerA进行处理。
+
+③当选择了一个合适的控制器后，DispatcherServlet就会将请求交给这个控制器去处理。在这个控制器上，用户的请求将会将用户提交的一些信息交由控制器处理并等待。然而设计的比较好的控制器本身对信息做很少的处理或者根本不做处理，而是将业务逻辑交给一个或多个服务器对象（Model）去处理。
+
+④当控制器对用户请求所携带的信息进行处理（或交给模型层处理）后，经常会产生一些其他的需要返回给浏览器进行显示的数据。这些原始数据直接显示出来显然是不友好的，那么就需要视图（View）来对这些数据进行显示了。控制器的最后一件事就是将模型数据打包，并且指定产生输出的视图的特定名称，然后它将模型、视图名称以及request请求一起发送给DispatcherServlet。所以控制器并没有与视图进行耦合，因为传递给DispatcherServlet的视图名称并不是某一个指定的特殊的文件名称（如后缀名一定是JSP或其他什么名称），它只要是一个可以产生输出和展示结果的逻辑名称就可以了。
+
+⑤DispatcherServlet会向一个视图解析器（ViewResolver）进行请求，视图解析器可以将逻辑视图名称映射到一个特定的视图显示文件上面。
+
+⑥现在DispatcherServlet知道哪一个视图文件可以显示结果了。该视图将会利用模板数据产生输出，这些输出通过response对象返回给客户端进行显示。
+
+
+
+### 19. @RequestMapping
+
+RequestMapping是一个用来处理请求地址映射的注解，可用于类或者方法上，用于类上的话，表示类中的所有请求都是以该地址作为父路径。
+
+@RequestMapping有六个属性，下面把它分为三类作为说明
+
+**value、method：**
+
+1. value：指定请求的实际地址
+2. method：定请求的method类型， GET、POST、PUT、DELETE 等
+
+**consumes、produces：**
+
+1. consumes：指定处理请求的提交内容类型（Content-Type），例如 application/json、text/html
+2. produces：指定返回的内容类型，仅当 request 请求头中的（Accept）类型中包含该指定类型才返回
+
+**params、header：**
+
+1. params：指定 request 中必须包含某些参数值是，才让该方法处理
+2. headers：指定 request 中必须包含某些指定的 header 值，才能让该方法处理请求
+
+
+
+### 20. Spring Controller
+
+Spring Controller默认都是单例模式，所以不是线程安全的。
+
+但是如果采用同步的话，会大大影响性能。
+
+解决方案是不要在Controller加入field字段。
+
+
+
+
+
+## MyBatis
+
+### 1. MyBatis概述
+
+MyBatis是一款在持久层使用的SQL映射框架，可以将SQL语句单独写在XML配置文件中，或者使用带有注解的Mapper映射类来完成数据库记录到Java实体的映射。与另一款主流的ORM框架Hibernate不同，MyBatis属于半自动的ORM框架，它虽然不能将不同数据库的影响隔离开，仍然需要自己编写SQL语句，但是可以灵活地控制SQL语句的构造，将SQL语句的编写和程序的运行分离开，使用更加便捷。
+
+
+
+### 2. MyBatis的优缺点
+
+优点：
+
+1. 消除了大量的jdbc冗余代码，包括参数设置、结果集封装
+2. SQL语句可以控制，方便查询优化，使用更加灵活
+3. 提供与IoC框架与Spring的集成
+4. 引入了缓存机制，提供了与第三方缓存库的集成与支持
+
+
+
+
 
 
 
