@@ -116,11 +116,93 @@ Dao层主要是和数据库进行交互，使用SQL语句向数据库发送命�
 
 ## annotation
 
-### @Configuration、@Bean、@EnableAutoConfiguration、@SpringBootConfiguration
+### @SpringBootApplication
 
-Spring的@Bean注解用于告诉方法，产生一个Bean对象，然后这个Bean对象交给Spring管理。产生这个Bean对象的方法Spring只会调用一次，随后这个Spring将会将这个Bean对象放在自己的IOC容器中。
+这个注解是 Spring Boot 项目的基石，创建 SpringBoot 项目之后会默认在主类加上。
 
-SpringIOC 容器管理一个或者多个bean，这些bean都需要在@Configuration注解下进行创建，在一个方法上使用@Bean注解就表明这个方法需要交给Spring进行管理。
+可以把`@SpringBootApplication`当作是`@Configuration`、`@EnableAutoConfiguration`、`@ComponentScan`的集合。
+
+- `@Configuration`：允许在 Spring 上下文中注册额外的 bean 或导入其他配置类。
+- `@ComponentScan`： 扫描被`@Component` (`@Service`,`@Controller`)注解的 bean，注解默认会扫描该类所在的包下所有的类。
+- `@EnableAutoConfiguration`：启用 SpringBoot 的自动配置机制。
+
+### @Spring Bean相关
+
+#### @Autowired、@Resource
+
+自动导入对象（实例）到类中，被注入进的类同样要被Spring Boot容器管理，例如：Service类注入到Controller类。
+
+[@Autowired的这些骚操作，你都知道吗？ - 云+社区 - 腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1867131)
+
+[使用@Autowired注入父类对象时会报错，找到多个bean对象处理 - 云+社区 - 腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1770166)
+
+@Resource是jdk提供的注解，它默认使用byName进行装配，byName无法装配则使用byType；
+
+@Autowired是spring提供的注解，@Autowired默认使用byType进行装配，byType无法装配则使用byName，如果接口有多个实现类，需要配合@Qualifier注解使用。
+————————————————
+版权声明：本文为CSDN博主「_云卷云舒_」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/Alexshi5/article/details/84000678
+
+[Spring的byType、byName的自动装配逻辑以及@Autowired和@Resource的使用示例_云卷云舒的架构师之路-CSDN博客](https://blog.csdn.net/Alexshi5/article/details/84000678)
+
+
+
+#### @Component、@Repository、@Service、@Controller
+
+如果使用@Autowired自动注入的话，需要在类上标注，让Spring容器帮助自动注入。
+
+想要把类标识为容器可识别的类，可以使用以上注解实现。
+
+- `@Component` ：通用的注解，可标注任意类为 `Spring` 组件。如果一个 Bean 不知道属于哪个层，可以使用`@Component` 注解标注。
+- `@Repository` : 对应持久层即 Dao 层，主要用于数据库相关操作。
+- `@Service` : 对应服务层，主要涉及一些复杂的逻辑，需要用到 Dao 层。
+- `@Controller` : 对应 Spring MVC 控制层，主要用户接受用户请求并调用 Service 层返回数据给前端页面。
+
+
+
+#### @RestController
+
+`@RestController`注解是`@Controller和`@`ResponseBody`的合集，表示这是个控制器 bean，并且是将函数的返回值直接填入 HTTP 响应体中，是 REST 风格的控制器。
+
+如果没有使用@RestController，只是使用@Controller并且不加@ResponseBody的话，一般返回的是一个视图。
+
+这种做法适用于比较传统的Spring MVC而不是前后端分离的架构设计，对于前后端不分离的情况，@Controller+@ResponseBody返回JSON或者XML形式数据。
+
+[@RestController vs @Controller (qq.com)](https://mp.weixin.qq.com/s?__biz=Mzg2OTA0Njk0OA==&mid=2247485544&idx=1&sn=3cc95b88979e28fe3bfe539eb421c6d8&chksm=cea247a3f9d5ceb5e324ff4b8697adc3e828ecf71a3468445e70221cce768d1e722085359907&token=1725092312&lang=zh_CN#rd)
+
+@RestController、@Controller、@ResponseBody
+
+在处理JSON的时候需要用到spring框架特有的注解@ResponseBody或者@RestController注解，这两个注解都会处理返回的数据格式，使用了该类型注解后返回的不再是视图，不会进行转跳，而是返回JSON或xml数据格式，输出在页面上。
+
+@RestController，一般是使用在类上的，其实就是结合了@Controller和@ResponseBody两个注解。
+
+@ResponseBody，一般是使用在单独的方法上的，需要哪个方法返回json数据格式，就在哪个方法上使用，具有针对性。
+
+如果哪个类下的所有方法需要返回json数据格式的，就在哪个类上使用该注解，具有统一性；需要注意的是，使用了@RestController注解之后，其本质相当于在该类的所有方法上都统一使用了@ResponseBody注解，所以该类下的所有方法都会返回json数据格式，输出在页面上，而不会再返回视图。
+采用@Contoller注解的方式，可以使接口的定义更加简单，将@Controller标记在某个类上，配合@RequestMapping注解，可以在一个类中定义多个接口，这样使用起来更加灵活。
+
+
+
+
+
+
+
+#### @Scope
+
+@Scope声明 Spring Bean 的作用域，也就是四种常见的作用域：
+
+- singleton : 唯一 bean 实例，Spring 中的 bean 默认都是单例的。
+- prototype : 每次请求都会创建一个新的 bean 实例。
+- request : 每一次 HTTP 请求都会产生一个新的 bean，该 bean 仅在当前 HTTP request 内有效。
+- session : 每一次 HTTP 请求都会产生一个新的 bean，该 bean 仅在当前 HTTP session 内有效。
+
+
+
+#### @Configuration
+
+一般用来声明配置类，可以使用 `@Component`注解替代，不过使用`Configuration`注解声明配置类更加语义化。
+
+
 
 [Spring Boot 2从入门到入坟 | 底层注解篇：@Configuration详解_李阿昀的博客-CSDN博客](https://blog.csdn.net/yerenyuan_pku/article/details/116201120)
 
@@ -326,70 +408,75 @@ public class DemoApplication {
 
 
 
+### 前后端传值
+
+#### @PathVariable
+
+用于获取路径参数。
 
 
 
+#### @RequestParam
+
+用于获取查询参数。
+
+假设某个方法的代码如下
+
+```java 
+@GetMapping("/class/{classId}/teachers")
+public list<Teacher> getClassTeachers(@PathVariable("classId") Long classId, 
+    								@RequestParam(value="type", required="false") String type){
+    return...
+}
+```
+
+如果我们前端给后端发送的请求url是`/class/{123}/teachers?type=Maths`，那么这里的参数classId就会自动赋值123，type赋值Maths。
 
 
 
+#### @RequestBody
+
+用于读取 Request 请求（可能是 POST,PUT,DELETE,GET 请求）的 body 部分并且**Content-Type 为 application/json** 格式的数据，接收到数据之后会自动将数据绑定到 Java 对象上去。
+
+系统会使用`HttpMessageConverter`或者自定义的`HttpMessageConverter`将请求的 body 中的 json 字符串转换为 java 对象。
+
+假设有一个`UserRegisterRequest`对象：
+
+```java 
+@Data
+public class UserRegisterRequest {
+    private String userName;
+    private String password;
+    private String fullName;
+}
+```
+
+此时有一个注册的接口：
+
+```java 
+@PostMapping
+public ResponseEntity signUp(@RequestBody UserRegisterRequest userRegisterRequest) {
+    return...
+}
+```
+
+如果发送的请求中的参数是这样的：
+
+```json
+{	
+    "userName":"coder",
+    "fullName":"shuangkou",
+    "password":"123456"
+}
+```
+
+这样我们的后端就可以直接把 json 格式的数据映射到我们的 `UserRegisterRequest` 类上。
+
+> 需要注意的是：**一个请求方法只可以有一个`@RequestBody`，但是可以有多个`@RequestParam`和`@PathVariable`**。 如果你的方法必须要用两个 `@RequestBody`来接受数据的话，大概率是你的数据库设计或者系统设计出问题了！
 
 
 
-
-### @Controller、@Service、@Repository、@Componet
-
-@Controller: 表明一个注解的类是一个"Controller"，也就是控制器，可以把它理解为MVC 模式的Controller 这个角色。这个注解是一个特殊的@Component，允许实现类通过类路径的扫描扫描到。它通常与@RequestMapping 注解一起使用。
-@Service: 表明这个带注解的类是一个"Service"，也就是服务层，可以把它理解为MVC 模式中的Service层这个角色，这个注解也是一个特殊的@Component，允许实现类通过类路径的扫描扫描到
-@Repository: 表明这个注解的类是一个"Repository",团队实现了JavaEE 模式中像是作为"Data Access Object" 可能作为DAO来使用，当与 PersistenceExceptionTranslationPostProcessor 结合使用时，这样注释的类有资格获得Spring转换的目的。这个注解也是@Component 的一个特殊实现，允许实现类能够被自动扫描到
-@Component: 表明这个注释的类是一个组件，当使用基于注释的配置和类路径扫描时，这些类被视为自动检测的候选者。
-
-
-
-
-
-### @Resource、@Autowired
-
-[@Autowired的这些骚操作，你都知道吗？ - 云+社区 - 腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1867131)
-
-[使用@Autowired注入父类对象时会报错，找到多个bean对象处理 - 云+社区 - 腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1770166)
-
-@Resource是jdk提供的注解，它默认使用byName进行装配，byName无法装配则使用byType；
-
-@Autowired是spring提供的注解，@Autowired默认使用byType进行装配，byType无法装配则使用byName，如果接口有多个实现类，需要配合@Qualifier注解使用。
-————————————————
-版权声明：本文为CSDN博主「_云卷云舒_」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
-原文链接：https://blog.csdn.net/Alexshi5/article/details/84000678
-
-[Spring的byType、byName的自动装配逻辑以及@Autowired和@Resource的使用示例_云卷云舒的架构师之路-CSDN博客](https://blog.csdn.net/Alexshi5/article/details/84000678)
-
-
-
-
-
-
-
-### @EnableSwagger2
-
-[Swagger2简单使用教程_M丶Rock-CSDN博客](https://blog.csdn.net/qq_37131913/article/details/111151379)
-
-
-
-
-
-### @RestController、@Controller、@ResponseBody
-
-在处理JSON的时候需要用到spring框架特有的注解@ResponseBody或者@RestController注解，这两个注解都会处理返回的数据格式，使用了该类型注解后返回的不再是视图，不会进行转跳，而是返回JSON或xml数据格式，输出在页面上。
-
-@RestController，一般是使用在类上的，其实就是结合了@Controller和@ResponseBody两个注解。
-
-@ResponseBody，一般是使用在单独的方法上的，需要哪个方法返回json数据格式，就在哪个方法上使用，具有针对性。
-
-如果哪个类下的所有方法需要返回json数据格式的，就在哪个类上使用该注解，具有统一性；需要注意的是，使用了@RestController注解之后，其本质相当于在该类的所有方法上都统一使用了@ResponseBody注解，所以该类下的所有方法都会返回json数据格式，输出在页面上，而不会再返回视图。
-采用@Contoller注解的方式，可以使接口的定义更加简单，将@Controller标记在某个类上，配合@RequestMapping注解，可以在一个类中定义多个接口，这样使用起来更加灵活。
-
-
-
-### @RequestMapping
+#### @RequestMapping
 
 [@RequestMapping注解的用法-阿里云开发者社区 (aliyun.com)](https://developer.aliyun.com/article/651661)
 
@@ -399,11 +486,76 @@ public class DemoApplication {
 
 
 
+### 读取配置信息
+
+假设我们的数据源配置文件`application.yml`内容如下：
+
+```yml
+wuhan2020: 2020年初武汉爆发了新型冠状病毒，疫情严重，但是，我相信一切都会过去！武汉加油！中国加油！
+
+my-profile:
+  name: Guide哥
+  email: koushuangbwcx@163.com
+
+library:
+  location: 湖北武汉
+  books:
+    - name: 天才基本法
+      description: 二十二岁的林朝夕在父亲确诊阿尔茨海默病这天
+    - name: 时间的秩序
+      description: 为什么我们记得过去，而非未来？
+    - name: 了不起的我
+      description: 如何养成一个新习惯？
+```
+
+#### @Value
+
+```java 
+@Value("${wuhan2020}")
+String wuhan;
+```
+
+wuhan = "2020年初武汉爆发了新型冠状病毒，疫情严重，但是，我相信一切都会过去！武汉加油！中国加油！"
+
+#### @ConfigurationProperties
+
+通过`@ConfigurationProperties`读取配置信息并与 bean 绑定。
+
+``` {
+@Component
+@ConfigurationProperties(prefix="library")
+class LibraryProperties {
+	private String location;
+	private List<Book> books;
+}
+```
+
+像使用普通的 Spring bean 一样，将其注入到类中使用。
+
+
+
+### 字段校验
+
+- `@NotEmpty` 被注释的字符串的不能为 null 也不能为空
+- `@NotBlank` 被注释的字符串非 null，并且必须包含一个非空白字符
+- `@Null` 被注释的元素必须为 null
+- `@NotNull` 被注释的元素必须不为 null
+- `@AssertTrue` 被注释的元素必须为 true
+- `@AssertFalse` 被注释的元素必须为 false
+- `@Pattern(regex=,flag=)`被注释的元素必须符合指定的正则表达式
+- `@Email` 被注释的元素必须是 Email 格式。
+- `@Min(value)`被注释的元素必须是一个数字，其值必须大于等于指定的最小值
+- `@Max(value)`被注释的元素必须是一个数字，其值必须小于等于指定的最大值
+- `@DecimalMin(value)`被注释的元素必须是一个数字，其值必须大于等于指定的最小值
+- `@DecimalMax(value)` 被注释的元素必须是一个数字，其值必须小于等于指定的最大值
+- `@Size(max=, min=)`被注释的元素的大小必须在指定的范围内
+- `@Digits (integer, fraction)`被注释的元素必须是一个数字，其值必须在可接受的范围内
+- `@Past`被注释的元素必须是一个过去的日期
+- `@Future` 被注释的元素必须是一个将来的日期
 
 
 
 
-### @Insert、@Delete、@Update、@Select
 
 
 
@@ -411,57 +563,29 @@ public class DemoApplication {
 
 
 
-### @ApiOperation
-
-
-
-
-
-
-
-### @Entry
-
-
-
-
-
-
-
-
-
-
-
-
-
-## lombok tag
+### lombok tag
 
 [lombok标签之@Data @AllArgsConstructor @@NoArgsConstructor -如何去除get，set方法。@Data注解和如何使用，lombok - aspirant - 博客园 (cnblogs.com)](https://www.cnblogs.com/aspirant/p/10298752.html)
 
-### @Expose
+#### @Expose
 
 
 
 
 
-### @Getter/Setter
+#### @Getter/Setter
 
 注解在类上, 为类提供读写属性
 
 
 
-### @ToString
+#### @ToString
 
 注解在类上, 为类提供 toString() 方法
 
 
 
-### @NotNull
-
-@NonNull : 注解在参数上, 如果该类参数为 null , 就会报出异常, throw new NullPointException(参数名)
-
-
-
-### @AllArgsConstructor
+#### @AllArgsConstructor
 
 会生成一个包含所有变量，同时如果变量使用了@NotNull的注解，会进行是否为空的校验
 
@@ -469,19 +593,19 @@ public class DemoApplication {
 
 
 
-### @NoArgsConstructor
+#### @NoArgsConstructor
 
 自动生成无参构造函数。
 
 
 
-### @RequiredArgsConstructor
+#### @RequiredArgsConstructor
 
 会生成一个包含常量（final），和标识了@NotNull的变量的构造方法。
 
 
 
-### @Data
+#### @Data
 
 注解在类上, 为类提供读写属性, 此外还提供了 equals()、hashCode()、toString() 方法
 
@@ -489,13 +613,13 @@ public class DemoApplication {
 
 
 
-### @Log4j
+#### @Log4j
 
 注解在类上，为类提供一个属性名为log的log4j日志对象
 
 
 
-### @Slf4j
+#### @Slf4j
 
 注解在类上，为类提供一个属性名为log的slf4j日志对象
 
@@ -645,12 +769,6 @@ public class XXXController{
 
 
 
-
-
-
-
-
-## theory
 
 
 
