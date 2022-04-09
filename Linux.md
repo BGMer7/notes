@@ -1332,6 +1332,169 @@ I/O size (minimum/optimal): 512 bytes / 512 bytes
 
 
 
+### Linux网络nc
+
+nc，全名叫 netcat，它可以用来完成很多的网络功能，譬如端口扫描、建立TCP/UDP连接，数据传输、网络调试等等，因此，它也常被称为网络工具的 **瑞士军刀** 。
+
+常用选项：
+
+- -4：只使用 IPv4 地址
+- -6：只使用 IPv6 地址
+- -l：启动本地监听
+- -n：不使用 DNS 解析
+- -p：指定源端口
+- -s：指定源 IP 地址
+- -u：使用 UDP，默认是 TCP
+- -v：显示详细信息
+- -w：设定超时时间（只适合用在 Client 端）
+- -d：禁止从标准输入读取数据，也就是客户端输入数据不会发送到服务端
+- -k：让服务端保持连接，不断开
+
+Linux没有默认安装nc命令，CentOS和Ubuntu可以通过以下命令安装：
+
+```shell
+# CentOS
+yum install nc
+# Ubuntu
+apt-get install netcat
+```
+
+
+
+**模拟C/S架构**
+
+模拟Server端：
+
+```shell
+nc -ul 3478
+```
+
+-u：这是一个udp端口
+
+-l：这是一个临时监听端口
+
+
+
+模拟Client端：
+
+```shell
+nc -u rock1.chinahxzq.com.cn 3478
+```
+
+直接向公网域名rock1.chinahxzq.com.cn的3478端口发送字符串
+
+Server中可以收到Client里输入的字符串说明网络UDP是连接成功的。
+
+
+
+**发送文件**
+
+nc 不仅可以发送消息，还可发送文件。
+
+假设服务端有一个 out.txt 的空文件，而客户端有一个 in.txt 文件，含有数据：`hello server`。
+
+Server 端接收文件：
+
+```shell
+nc localhost 6000 > out.txt
+```
+
+Client 端发送文件：
+
+```shell
+nc localhost 6000 < in.txt
+```
+
+之后，我们可以看到 Server 端的 out.txt 文件中已经有数据了：
+
+```shell
+# cat out.txt
+hello server
+```
+
+除了可以发送文件，nc 也可以发送目录，只需要将目录压缩发送即可。
+
+
+
+**端口扫描**
+
+端口扫描是一个非常重要的功能，很多时候系统管理员会通过扫描服务器上端口，来识别系统中漏洞，nc 工具提供了非常方便的操作：
+
+```shell
+nc -vz 192.168.0.117 1-100
+```
+
+这条命令扫描 192.168.1.3 上 1-100 端口区间，有哪些端口是开放的。
+
+```shell
+# nc -vz 192.168.0.117 1-100
+...
+nc: connect to 192.168.0.117 port 21 (tcp) failed: Connection refused
+Connection to 192.168.0.117 22 port [tcp/ssh] succeeded!
+nc: connect to 192.168.0.117 port 23 (tcp) failed: Connection refused
+...
+```
+
+可以看到，只有 22 号端口是开放的。
+
+如果我们想扫描多个服务器上的多个端口是否开放，可以写一个脚本来完成，比如：
+
+首先，用一个 `sip.txt` 保存所有服务器的地址：
+
+```shell
+# cat sip.txt
+192.168.1.2
+192.168.1.3
+192.168.1.4
+```
+
+再用一个 `port.txt`保存要扫描的端口号：
+
+```shell
+# cat port.txt
+22 
+80
+```
+
+然后，写一个脚本 `portscan.sh` 来遍历这个文件。
+
+```shell
+# vim portscan.sh
+#!/bin/sh
+for server in `more sip.txt`
+do
+for port in `more port.txt`
+do
+nc -zv $server $port
+echo ""
+done
+done
+```
+
+给这个脚本赋予可执行权限：
+
+```shell
+chmod +x portscan.sh
+```
+
+运行这个脚本就可以自动扫描多个服务器的多个端口是否开放了。
+
+```shell
+# sh portscan.sh
+Connection to 192.168.1.2 22 port [tcp/ssh] succeeded!
+Connection to 192.168.1.2 80 port [tcp/http] succeeded!
+
+Connection to 192.168.1.3 22 port [tcp/ssh] succeeded!
+Connection to 192.168.1.3 80 port [tcp/http] succeeded!
+
+Connection to 192.168.1.4 22 port [tcp/ssh] succeeded!
+Connection to 192.168.1.4 80 port [tcp/http] succeeded!
+```
+
+
+
+
+
 ### init
 
 [linux 下的init 0，1，2，3，4，5，6知识介绍_My Oracle Recipe-CSDN博客](https://blog.csdn.net/cougar_mountain/article/details/9798191)
