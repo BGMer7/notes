@@ -25,7 +25,7 @@ maven选择：
 
 代码层的结构：
 
-#### 启动类Application.java
+### 启动类Application.java
 
 项目启动时，其当前层及子目录中所有controller会被编译，可以通过直接运行Application类来启动 Spring Boot应用。
 
@@ -39,7 +39,7 @@ Application中的常用注解：
 
 
 
-#### 前端控制层Controller
+### 前端控制层Controller
 
 controller的功能为接受请求和控制响应，controller负责前后端的交互，接受前端请求，决定使用什么视图，然后控制需要准备什么数据显示，再调用service层，接收service返回的数据，最后将service返回来的数据或者页面返回到客户端。
 
@@ -47,19 +47,19 @@ controller的功能为接受请求和控制响应，controller负责前后端的
 
 
 
-#### 数据服务接口层Service
+### 数据服务接口层Service
 
 存放功能的业务逻辑，本质也是关于数据库的处理，但不是和数据库直接打交道。
 
 
 
-#### 数据服务实现层Service Impl
+### 数据服务实现层Service Impl
 
 
 
 
 
-#### 数据持久层dao
+### 数据持久层dao
 
 Dao层主要是和数据库进行交互，使用SQL语句向数据库发送命令，完成增删改查。
 
@@ -70,7 +70,7 @@ Dao层主要是和数据库进行交互，使用SQL语句向数据库发送命�
 
 
 
-#### 实体类Domain/Entity
+### 实体类Domain/Entity
 
 主要用于定义与数据库的对象相对应的属性，提供get/set方法，toString方法，定义有参和无参构造函数。
 
@@ -78,7 +78,7 @@ Dao层主要是和数据库进行交互，使用SQL语句向数据库发送命�
 
 
 
-#### 工具类Utils
+### 工具类Utils
 
 
 
@@ -86,7 +86,7 @@ Dao层主要是和数据库进行交互，使用SQL语句向数据库发送命�
 
 
 
-#### 配置类Config
+### 配置类Config
 
 
 
@@ -626,6 +626,197 @@ class LibraryProperties {
 
 
 
+
+### integration
+
+#### RestTemplate
+
+[RestTemplate几种常用方法说明](https://blog.csdn.net/keehom/article/details/80721599)
+
+##### Get请求
+
+**第一种：getForEntity**
+
+在RestTemplate中，发送一个GET请求，我们可以通过如下两种方式
+
+getForEntity方法的返回值是一个`ResponseEntity<T>`，`ResponseEntity<T>`是Spring对HTTP请求响应的封装，包括了几个重要的元素，如响应码、contentType、contentLength、响应消息体等。
+
+```java
+@RequestMapping("/gethello")
+public String getHello() {
+    ResponseEntity<String> responseEntity = restTemplate.getForEntity("http://HELLO-SERVICE/hello", String.class);
+    String body = responseEntity.getBody();
+    HttpStatus statusCode = responseEntity.getStatusCode();
+    int statusCodeValue = responseEntity.getStatusCodeValue();
+    HttpHeaders headers = responseEntity.getHeaders();
+    StringBuffer result = new StringBuffer();
+    result.append("responseEntity.getBody()：").append(body).append("<hr>")
+          .append("responseEntity.getStatusCode()：").append(statusCode).append("<hr>")
+          .append("responseEntity.getStatusCodeValue()：").append(statusCodeValue).append("<hr>")
+          .append("responseEntity.getHeaders()：").append(headers).append("<hr>");
+    return result.toString();
+}
+```
+
+- getForEntity的第一个参数为我要调用的服务的地址，这里我调用了服务提供者提供的/hello接口，注意这里是通过服务名调用而不是服务地址，如果写成服务地址就没法实现客户端负载均衡了。
+- getForEntity第二个参数String.class表示我希望返回的body类型是String
+- 拿到返回结果之后，将返回结果遍历打印出来
+
+
+
+有时候我在调用服务提供者提供的接口时，可能需要传递参数，有两种不同的方式，如下
+
+```java
+@RequestMapping("/sayhello")
+public String sayHello() {
+    ResponseEntity<String> responseEntity = restTemplate.getForEntity("http://HELLO-SERVICE/sayhello?name={1}", String.class, "张三");
+    return responseEntity.getBody();
+}
+
+@RequestMapping("/sayhello2")
+public String sayHello2() {
+    Map<String, String> map = new HashMap<>();
+    map.put("name", "李四");
+    ResponseEntity<String> responseEntity = restTemplate.getForEntity("http://HELLO-SERVICE/sayhello?name={name}", String.class, map);
+    return responseEntity.getBody();
+}
+```
+
+- 以用一个数字做占位符，最后是一个可变长度的参数，来一一替换前面的占位符
+- 也可以前面使用name={name}这种形式，最后一个参数是一个map，map的key即为前边占位符的名字，map的value为参数值
+
+
+
+第一个调用地址也可以是一个URI而不是字符串，这个时候我们构建一个URI即可，参数都包含在URI中了，如下
+
+```java
+@RequestMapping("/sayhello3")
+public String sayHello3() {
+    UriComponents uriComponents = UriComponentsBuilder.fromUriString("http://HELLO-SERVICE/sayhello?name={name}").build().expand("王五").encode();
+    URI uri = uriComponents.toUri();
+    ResponseEntity<String> responseEntity = restTemplate.getForEntity(uri, String.class);
+    return responseEntity.getBody();
+}
+```
+
+
+
+服务提供者不光可以返回一个String，也可以返回一个自定义类型的对象，比如提供如下方法：
+
+```java
+@RequestMapping(value = "/getbook", method = RequestMethod.GET)
+public Book book() {
+    return new Book("三国演义", 90, "罗贯中", "花城出版社");
+}
+```
+
+对于这个方法，调用的时候可以这样调用
+
+```java
+@RequestMapping("/book1")
+public Book book1() {
+    ResponseEntity<Book> responseEntity = restTemplate.getForEntity("http://HELLO-SERVICE/getbook1", Book.class);
+    return responseEntity.getBody();
+}
+```
+
+返回的结果如下：
+
+```
+{
+	"name": "三国演义",
+	"price": 90,
+	"author": "罗贯中",
+	"publish": "花城出版社"
+}
+```
+
+
+
+**getForObject**
+
+getForObject函数实际上是对getForEntity函数的进一步封装，如果你只关注返回的消息体的内容，对其他信息都不关注，此时可以使用getForObject。
+
+```java
+@RequestMapping("/book2")
+public Book book2() {
+    Book book = restTemplate.getForObject("http://HELLO-SERVICE/getbook1", Book.class);
+    return book;
+}
+```
+
+
+
+##### Post请求
+
+在RestTemplate中，POST请求可以通过如下三个方法来发起
+
+**postForEntity**
+
+```java 
+@RequestMapping(value = "/getbook2", method = RequestMethod.POST)
+public Book book2(@RequestBody Book book) {
+    System.out.println(book.getName());
+    book.setPrice(33);
+    book.setAuthor("曹雪芹");
+    book.setPublisher("人民文学出版社");
+    return book;
+}
+```
+
+我这里创建了一个Book对象，这个Book对象只有name属性有值，将之传递到服务提供者那里去，服务提供者代码如下
+
+```java
+@RequestMapping("/book3")
+public Book book3() {
+    Book book = new Book();
+    book.setName("红楼梦");
+    ResponseEntity<Book> responseEntity = restTemplate.postForEntity("http://HELLO-SERVICE/getbook2", book, Book.class);
+    return responseEntity.getBody();
+}
+```
+
+postForEntity的第一个参数表示调用的服务的地址，第二个参数表示上传的参数，第三个参数表示返回的消息体的数据类型。
+
+
+
+**postForObject**
+
+如果你只关注，返回的消息体，可以直接使用postForObject。用法和getForObject一致。
+
+
+
+**postForLocation**
+
+postForLocation也是提交新资源，提交成功之后，返回新资源的URI，postForLocation的参数和前面两种的参数基本一致，只不过该方法的返回值为Uri，这个只需要服务提供者返回一个Uri即可，该Uri表示新资源的位置。
+
+
+
+##### Put请求
+
+在RestTemplate中，PUT请求可以通过put方法调用，put方法的参数和前面介绍的postForEntity方法的参数基本一致，只是put方法没有返回值而已。举一个简单的例子，如下：
+
+```java
+@RequestMapping("/put")
+public void put() {
+    Book book = new Book();
+    book.setName("红楼梦");
+    restTemplate.put("http://HELLO-SERVICE/getbook3/{1}", book, 99);
+}
+```
+
+
+
+##### **Delete请求**
+
+delete请求我们可以通过delete方法调用来实现，如下例子
+
+```java
+@RequestMapping("/delete")
+public void delete() {
+    restTemplate.delete("http://HELLO-SERVICE/getbook4/{1}", 100);
+}
+```
 
 
 
