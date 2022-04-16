@@ -1098,7 +1098,7 @@ public Result test() throws Exception{
 部署运行
 
 ```shell
-nohup java -jar demo-0.0.1-SNAPSHOT.jar >> log_gatsby_demo.out 2> &1
+nohup java -jar demo-0.0.1-SNAPSHOT.jar >> log_gatsby_demo.out 2>&1 &
 ```
 
 以及
