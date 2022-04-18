@@ -975,7 +975,7 @@ FILE *fp;
 
 ### Linux的目录大小
 
-### 1.查看当前文件目录各个文件夹大小
+#### 1.查看当前文件目录各个文件夹大小
 
 ```shell
 du -h --max-depth=1
@@ -983,7 +983,7 @@ du -h --max-depth=1
 
 查看指定目录  **du -h --max-depth=1 /path**
 
-### 2. 查看当前目录下所有目录及子目录大小
+#### 2. 查看当前目录下所有目录及子目录大小
 
 ```shell
 **du -h - .**
@@ -993,13 +993,13 @@ du -h --max-depth=1
 
 -h表示用K、M、G的人性化形式显示
 
-### 3. du 命令参数详解
+#### 3. du 命令参数详解
 
 du [-abcDhHklmsSx] [-L <符号连接>][-X <文件>][--block-size][--exclude=<目录或文件>] [--max-depth=<目录层数>][--help][--version][目录或文件]
 
 **常用参数：** -a或-all 为每个指定文件显示磁盘使用情况，或者为目录中每个文件显示各自磁盘使用情况。 -b或-bytes 显示目录或文件大小时，以byte为单位。 -c或–total 除了显示目录或文件的大小外，同时也显示所有目录或文件的总和。 -D或–dereference-args 显示指定符号连接的源文件大小。 -h或–human-readable 以K，M，G为单位，提高信息的可读性。 -H或–si 与-h参数相同，但是K，M，G是以1000为换算单位,而不是以1024为换算单位。 -k或–kilobytes 以1024 bytes为单位。 -l或–count-links 重复计算硬件连接的文件。 -L<符号连接>或–dereference<符号连接> 显示选项中所指定符号连接的源文件大小。 -m或–megabytes 以1MB为单位。 -s或–summarize 仅显示总计，即当前目录的大小。 -S或–separate-dirs 显示每个目录的大小时，并不含其子目录的大小。 -x或–one-file-xystem 以一开始处理时的文件系统为准，若遇上其它不同的文件系统目录则略过。 -X<文件>或–exclude-from=<文件> 在<文件>指定目录或文件。 –exclude=<目录或文件> 略过指定的目录或文件。 –max-depth=<目录层数> 超过指定层数的目录后，予以忽略。 –help 显示帮助。 –version 显示版本信息。
 
-### 4. 其他常用命令：
+#### 4. 其他常用命令：
 
 1> 要显示一个目录树及其每个子树的磁盘使用情况 du /home/linux 这在/home/linux目录及其每个子目录中显示了磁盘块数。
 
@@ -1493,6 +1493,27 @@ Connection to 192.168.1.4 80 port [tcp/http] succeeded!
 
 
 
+### apt-get源
+
+更改下载源
+
+**找到/etc/apt/sorces.list文件用文本编辑器打开后ctrl+A全选之后ctrl+V替换位如下代码**
+
+```txt
+deb http://mirrors.163.com/ubuntu/ bionic main restricted universe multiverse
+deb http://mirrors.163.com/ubuntu/ bionic-security main restricted universe multiverse
+deb http://mirrors.163.com/ubuntu/ bionic-updates main restricted universe multiverse
+deb http://mirrors.163.com/ubuntu/ bionic-proposed main restricted universe multiverse
+deb http://mirrors.163.com/ubuntu/ bionic-backports main restricted universe multiverse
+deb-src http://mirrors.163.com/ubuntu/ bionic main restricted universe multiverse
+deb-src http://mirrors.163.com/ubuntu/ bionic-security main restricted universe multiverse
+deb-src http://mirrors.163.com/ubuntu/ bionic-updates main restricted universe multiverse
+deb-src http://mirrors.163.com/ubuntu/ bionic-proposed main restricted universe multiverse
+deb-src http://mirrors.163.com/ubuntu/ bionic-backports main restricted universe multiverse
+```
+
+
+
 
 
 ### init
@@ -1501,7 +1522,7 @@ Connection to 192.168.1.4 80 port [tcp/http] succeeded!
 
 
 
-### find & locate & location
+### find
 
 [linux中whereis、which、find、location的区别和用法 - 泥土里的绽放 - 博客园 (cnblogs.com)](https://www.cnblogs.com/cjjjj/p/9846374.html)
 
@@ -1557,13 +1578,13 @@ gatsby@ubuntu:~$ find . -type f -mmin -10 // 最近10分钟更新的文件，typ
 
 
 
-locate [OPTION]... [PATTERN]...
+### locate [OPTION]... [PATTERN]...
 
 locate命令其实是“find -name”的另一种写法，但是要比后者快得多，原因在于它不搜索具体目录，而是搜索一个数据库（/var/lib/locatedb），这个数据库中含有本地所有文件信息。**Linux系统自动创建这个数据库，并且每天自动更新一次，所以使用locate命令查不到最新变动过的文件。为了避免这种情况，可以在使用locate之前，先使用updatedb命令，手动更新数据库。**
 
 
 
-whereis 
+### whereis 
 
 whereis命令只能用于程序名的搜索，而且只搜索二进制文件（参数-b）、man说明文件（参数-m）和源代码文件（参数-s）。如果省略参数，则返回所有信息。
 
@@ -1574,7 +1595,7 @@ stress: /usr/bin/stress /usr/share/man/man1/stress.1.gz /usr/share/info/stress.i
 
 
 
-which
+### which
 
 which命令的作用是，在PATH变量指定的路径中，搜索某个系统命令的位置，并且返回第一个搜索结果。也就是说，使用which命令，就可以看到某个系统命令是否存在，以及执行的到底是哪一个位置的命令。
 
@@ -1582,6 +1603,25 @@ which命令的作用是，在PATH变量指定的路径中，搜索某个系统�
 gatsby@ubuntu:~/Desktop/git$ which stress
 /usr/bin/stress
 ```
+
+
+
+### 虚拟机中的网络问题
+
+VMware登录没有网络
+
+```shell
+sudo service network-manager stop
+sudo rm /var/lib/NetworkManager/NetworkManager.state
+sudo service network-manager start
+// 将文件里面唯一的false改成true
+sudo gedit /etc/NetworkManager/NetworkManager.conf
+sudo service network-manager restart
+```
+
+
+
+
 
 
 
