@@ -2,6 +2,8 @@
 
 # Linux
 
+## OS
+
 [Linux下查询进程PS或者杀死进程kill的小技巧 - 魁·帝小仙 - 博客园 (cnblogs.com)](https://www.cnblogs.com/dxxblog/p/8033788.html)
 
 ### Linux主要负责的功能
@@ -917,6 +919,37 @@ FILE *fp;
 
 
 
+### init
+
+[linux 下的init 0，1，2，3，4，5，6知识介绍_My Oracle Recipe-CSDN博客](https://blog.csdn.net/cougar_mountain/article/details/9798191)
+
+
+
+### 虚拟机中的网络问题
+
+VMware登录没有网络
+
+```shell
+sudo service network-manager stop
+sudo rm /var/lib/NetworkManager/NetworkManager.state
+sudo service network-manager start
+// 将文件里面唯一的false改成true
+sudo gedit /etc/NetworkManager/NetworkManager.conf
+sudo service network-manager restart
+```
+
+
+
+
+
+
+
+
+
+
+
+## Command
+
 ### Linux的ls命令
 
 最常用的是`ps aux`，然后再利用一个管道符号导向到grep去查找特定的进程，然后再对特定的进程进行操作。
@@ -1332,6 +1365,93 @@ I/O size (minimum/optimal): 512 bytes / 512 bytes
 
 
 
+#### iptables
+
+**iptables常用命令：**
+
+- iptables -A 将一个规则添加到链末尾
+- iptables -D 将指定的链中删除规则
+- iptables -F 将指定的链中删除所有规则
+- iptables -I 将在指定链的指定编号位置插入一个规则
+- iptables -L 列出指定链中所有规则
+- iptables -t nat -L 列出所有NAT链中所有规则
+- iptables -N 建立用户定义链
+- iptables -X 删除用户定义链
+- iptables -P 修改链的默认设置，如将iptables -P INPUT DROP (将INPUT链设置为DROP)
+
+**常见设置参数介绍：**
+
+- --dport 指定目标TCP/IP端口 如 –dport 80
+- --sport 指定源TCP/IP端口 如 –sport 80
+- -p tcp 指定协议为tcp
+- -p icmp 指定协议为ICMP
+- -p udp 指定协议为UDP
+- -j DROP 拒绝
+- -j ACCEPT 允许
+- -j REJECT 拒绝并向发出消息的计算机发一个消息
+- -j LOG 在/var/log/messages中登记分组匹配的记录
+- -m mac –mac 绑定MAC地址
+- -m limit –limit 1/s 1/m 设置时间策列
+- -s 10.10.0.0或10.10.0.0/16 指定源地址或地址段
+- -d 10.10.0.0或10.10.0.0/16 指定目标地址或地址段
+- -s ! 10.10.0.0 指定源地址以外的
+
+
+
+**查看iptables配置**
+
+```shell
+iptables -L -n
+```
+
+**保存防火墙设置**
+
+```shell
+# /etc/init.d/iptables save
+或
+# service iptables save
+或
+# iptables-save
+```
+
+添加防火墙规则
+
+首先添加INPUT链,INPUT链的默认规则是DROP,所以我们就写需要ACCETP(通过)的链。
+
+**添加ssh23端口**
+
+```shell
+[root@tp ~]# iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+[root@tp ~]# iptables -A OUTPUT -p tcp --sport 22 -j ACCEPT 
+```
+
+**添加Web80端口**
+
+```shell
+[root@tp ~]# iptables -A OUTPUT -p tcp --sport 80 -j ACCEPT
+[root@tp ~]# iptables -A INPUT -p tcp --dport 80 -j ACCEPT
+```
+
+**只允许192.168.0.3的机器进行SSH连接**
+
+```shell
+[root@tp ~]# iptables -A INPUT -s 192.168.0.0/24 -p tcp --dport 22 -j ACCEPT
+```
+
+**只允许除了192.168.0.3以外的机器进行SSH连接**
+
+```shell
+[root@tp ~]# iptables -A INPUT -s ! 192.168.0.3 -p tcp --dport 22 -j ACCEPT
+```
+
+
+
+[Linux下iptables防火墙配置详解 - 简书 (jianshu.com)](https://www.jianshu.com/p/586da7c8fd42)
+
+
+
+
+
 ### Linux网络nc
 
 nc，全名叫 netcat，它可以用来完成很多的网络功能，譬如端口扫描、建立TCP/UDP连接，数据传输、网络调试等等，因此，它也常被称为网络工具的 **瑞士军刀** 。
@@ -1493,11 +1613,11 @@ Connection to 192.168.1.4 80 port [tcp/http] succeeded!
 
 
 
-### apt-get源
+### Linux apt-get源
 
 更改下载源
 
-**找到/etc/apt/sorces.list文件用文本编辑器打开后ctrl+A全选之后ctrl+V替换位如下代码**
+**找到/etc/apt/sources.list文件用文本编辑器打开后ctrl+A全选之后ctrl+V替换位如下代码**
 
 ```txt
 deb http://mirrors.163.com/ubuntu/ bionic main restricted universe multiverse
@@ -1514,15 +1634,9 @@ deb-src http://mirrors.163.com/ubuntu/ bionic-backports main restricted universe
 
 
 
+### Linux查找
 
-
-### init
-
-[linux 下的init 0，1，2，3，4，5，6知识介绍_My Oracle Recipe-CSDN博客](https://blog.csdn.net/cougar_mountain/article/details/9798191)
-
-
-
-### find
+#### find
 
 [linux中whereis、which、find、location的区别和用法 - 泥土里的绽放 - 博客园 (cnblogs.com)](https://www.cnblogs.com/cjjjj/p/9846374.html)
 
@@ -1578,13 +1692,13 @@ gatsby@ubuntu:~$ find . -type f -mmin -10 // 最近10分钟更新的文件，typ
 
 
 
-### locate [OPTION]... [PATTERN]...
+#### locate [OPTION]... [PATTERN]...
 
 locate命令其实是“find -name”的另一种写法，但是要比后者快得多，原因在于它不搜索具体目录，而是搜索一个数据库（/var/lib/locatedb），这个数据库中含有本地所有文件信息。**Linux系统自动创建这个数据库，并且每天自动更新一次，所以使用locate命令查不到最新变动过的文件。为了避免这种情况，可以在使用locate之前，先使用updatedb命令，手动更新数据库。**
 
 
 
-### whereis 
+#### whereis 
 
 whereis命令只能用于程序名的搜索，而且只搜索二进制文件（参数-b）、man说明文件（参数-m）和源代码文件（参数-s）。如果省略参数，则返回所有信息。
 
@@ -1595,28 +1709,13 @@ stress: /usr/bin/stress /usr/share/man/man1/stress.1.gz /usr/share/info/stress.i
 
 
 
-### which
+#### which
 
 which命令的作用是，在PATH变量指定的路径中，搜索某个系统命令的位置，并且返回第一个搜索结果。也就是说，使用which命令，就可以看到某个系统命令是否存在，以及执行的到底是哪一个位置的命令。
 
 ```shell
 gatsby@ubuntu:~/Desktop/git$ which stress
 /usr/bin/stress
-```
-
-
-
-### 虚拟机中的网络问题
-
-VMware登录没有网络
-
-```shell
-sudo service network-manager stop
-sudo rm /var/lib/NetworkManager/NetworkManager.state
-sudo service network-manager start
-// 将文件里面唯一的false改成true
-sudo gedit /etc/NetworkManager/NetworkManager.conf
-sudo service network-manager restart
 ```
 
 
