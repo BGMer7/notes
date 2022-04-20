@@ -170,6 +170,66 @@ Eureka 采用 CS（Client/Server，客户端/服务器） 架构，它包括以�
 
 
 
+#### Eureka server部署
+
+pom.xml
+
+```xml
+<!--eureka-server -->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
+    <version>2.2.10.RELEASE</version>
+</dependency>
+```
+
+需要注意的是，Spring Cloud的版本需要和Spring Boot保持一致。
+
+
+
+application.yml
+
+```yml
+server:
+  port: 8300
+
+spring:
+  application:
+    name: springcloud-eureka-server
+
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+
+```
+
+
+
+EurekaApplication.java
+
+```java
+package com.gatsby.eureka;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.netflix.eureka.server.EnableEurekaServer;
+
+@EnableEurekaServer
+@SpringBootApplication
+public class EurekaApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(EurekaApplication.class, args);
+    }
+}
+```
+
+
+
 
 
 ### Ribbon
@@ -200,6 +260,45 @@ Spring Cloud Ribbon是基于Netflix Ribbon实现的一套客户端负载均衡�
 - 可用服务端清单存储在负载均衡服务器上。
 
 
+
+### Open Feign
+
+#### 服务调用
+
+OpenFeign是一个显示声明式的WebService客户端。使用OpenFeign能让编写Web Service客户端更加简单。使用时只需定义服务接口，然后在上面添加注解。OpenFeign也支持可拔插式的编码和解码器。
+
+Spring Cloud对Feign进行了封装，使其支持MVC注解和HttpMessageConverts。和Eureka（服务注册中心）和Ribbon组合可以实现负载均衡。在Spring Cloud中使用OpenFeign，可以做到使用HTTP请求访问远程服务，就像调用本地方法一样的，开发者完全感知不到这是在调用远程方法，更感知不到在访问HTTP请求，非常的方便。
+
+
+
+#### Open Feign的作用
+
+- OpenFeign的设计宗旨式简化Java Http客户端的开发。Feign在restTemplate的基础上做了进一步的封装，由其来帮助我们定义和实现依赖服务接口的定义。在OpenFeign的协助下，我们只需创建一个接口并使用注解的方式进行配置（类似于Dao接口上面的Mapper注解）即可完成对服务提供方的接口绑定，大大简化了Spring cloud Ribbon的开发，自动封装服务调用客户端的开发量。
+- OpenFeign集成了Ribbon,利用Ribbon维护了服务列表，并且通过Ribbon实现了客户端的负载均衡。与Ribbon不同的是，通过OpenFeign只需要定义服务绑定接口且以申明式的方法，优雅而简单的实现了服务调用。
+
+
+
+
+
+
+
+# Spring Cloud Alibaba
+
+## Nacos
+
+[Nacos Spring Boot 快速开始](https://nacos.io/zh-cn/docs/quick-start-spring-boot.html)
+
+### Nacos和Eureka
+
+
+
+
+
+
+
+
+
+### Spring Boot+Nacos	
 
 
 
