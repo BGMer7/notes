@@ -837,6 +837,47 @@ public interface Person {
 // Person.MALE = 1
 ```
 
+#### static block
+
+静态块，形式上为“static{...}”，静态块里的内容在类被加载的时候执行，存在方法区（静态区）中，能被线程共享。
+
+类加载就是把需要的类的代码加载到内存中，且在此类首次使用时静态代码块被加载执行，也就是说静态代码块只执行一次。
+
+```java
+public class StaticDemo {
+    public static void main(String[] args) {
+        try {
+            Class.forName("org.Demo1");
+            Class.forName("org.Demo1");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+class Demo {
+    static {
+        System.out.println("Demo1 static block!");
+    }
+}
+```
+
+输出结果：
+
+```
+Demo1 static block!
+```
+
+静态代码块的调用：
+
+1. 第一次创建一个对象的时候；
+2. 调用该类的静态方法时（静态块代码优先于静态函数先执行）
+3. 使用该类的非常量静态字段
+4. 使用反射
+5. 初始化该类的子类（首先执行父类的静态内容，然后执行子类的静态内容，然后执行父类的构造函数，然后执行子类的构造函数）
+
+[Java 静态块（static块)浅析 - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/45107365)
+
 
 
 ### package
@@ -5746,7 +5787,7 @@ i=2 -> h = 31 * (31 * (31 * 0 + val[0]) + val[1]) + val[2]
 >    ```
 >    Prime numbers are chosen to best distribute data among hash buckets.  
 >    If the distribution of inputs is random and evenly spread, then the  choice of the hash code/modulus does not matter. It only has an impact  when there is a certain pattern to the inputs.
->                                     
+>                                        
 >    This is often the case when dealing with memory locations. 
 >    For  example, all 32-bit integers are aligned to addresses divisible by 4.  
 >    Check out the table below to visualize the effects of using a prime vs.  non-prime modulus:
