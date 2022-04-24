@@ -278,6 +278,242 @@ Spring Cloud对Feign进行了封装，使其支持MVC注解和HttpMessageConvert
 
 
 
+#### Feign和OpenFeign
+
+**相同点**
+
+- Feign 和 OpenFeign 都是 Spring Cloud 下的远程调用和负载均衡组件。
+- Feign 和 OpenFeign 作用一样，都可以实现服务的远程调用和负载均衡。
+- Feign 和 OpenFeign **都对 Ribbon 进行了集成**，都利用 Ribbon 维护了可用服务清单，并通过 Ribbon 实现了客户端的负载均衡。
+- Feign 和 OpenFeign 都是在服务消费者（客户端）定义服务绑定接口并通过注解的方式进行配置，以实现远程服务的调用。
+
+**不同点**
+
+- Feign 和 OpenFeign 的依赖项不同，Feign 的依赖为 spring-cloud-starter-feign，而 OpenFeign 的依赖为 spring-cloud-starter-openfeign。
+- Feign 和 OpenFeign 支持的注解不同，Feign 支持 Feign 注解和 JAX-RS 注解，但不支持 Spring MVC 注解；OpenFeign 除了支持 Feign 注解和 JAX-RS 注解外，还支持 Spring MVC 注解。
+
+
+
+[详细讲解OpenFeign的使用姿势！-阿里云开发者社区 (aliyun.com)](https://developer.aliyun.com/article/775626)
+
+```text
+Feign is a declarative web service client. It makes writing web service clients e
+asier. To use Feign create an interface and annotate it. It has pluggable annotat
+ion support including Feign annotations and JAX-RS annotations. Feign also suppor
+ts pluggable encoders and decoders. Spring Cloud adds support for Spring MVC anno
+tations and for using the same HttpMessageConverters used by default in Spring We
+b. Spring Cloud integrates Eureka, Spring Cloud CircuitBreaker, as well as Spring
+Cloud LoadBalancer to provide a load-balanced http client when using Feign.
+```
+
+Feign的作用在于，一个显式的WebService客户端，使用OpenFeign让Web Service更加简单，使用时只需要定义服务接口，然后在上面添加注解，同时OpenFeign配合Eureka对于负载均衡做了封装。
+
+在Spring Cloud中使用OpenFeign，可以做到使用HTTP请求访问远程服务，就像调用本地方法一样的，开发者完全感知不到这是在调用远程方法，更感知不到在访问HTTP请求，非常的方便。
+
+- OpenFeign的设计宗旨式简化Java Http客户端的开发。Feign在restTemplate的基础上做了进一步的封装，由其来帮助我们定义和实现依赖服务接口的定义。在OpenFeign的协助下，我们只需创建一个接口并使用注解的方式进行配置（类似于Dao接口上面的Mapper注解）即可完成对服务提供方的接口绑定，大大简化了Spring cloud Ribbon的开发，自动封装服务调用客户端的开发量。
+- OpenFeign集成了Ribbon,利用ribbon维护了服务列表，并且通过ribbon实现了客户端的负载均衡。与ribbon不同的是，通过OpenFeign只需要定义服务绑定接口且以申明式的方法，优雅而简单的实现了服务调用。
+
+
+
+#### OpenFeign配置
+
+pom.xml
+
+```shell
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.6.7</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>com.example</groupId>
+    <artifactId>Feign-Provider</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>Feign-Provider</name>
+    <description>Demo project for Spring Boot</description>
+    <properties>
+        <java.version>1.8</java.version>
+        <spring-cloud.version>2021.0.1</spring-cloud.version>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-netflix-eureka-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-devtools</artifactId>
+            <scope>runtime</scope>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+
+```
+
+不得不说pom.xml的配置确实是比较头疼的事情，因为Spring Boot和Spring Cloud存在大量版本冲突，最后想了一个办法，就是在idea创建新的项目的时候直接使用idea默认创建，那么版本冲突就可以得到解决。
+
+
+
+application.yml
+
+```yml
+server:
+  port: 8900
+
+spring:
+  application:
+    name: feign-provider
+
+eureka:
+  client:
+    register-with-eureka: false #服务消费者可以不向服务注册中心注册服务
+    service-url:
+      defaultZone: http://192.168.1.106:8300/eureka/
+    fetch-registry: true  #服务消费者客户端需要去检索服务
+```
+
+端口是指这个服务的运行端口，name是这个服务的name，defaultZone是Eureka服务器的地址，**所以OpenFeign的前提是需要有一个注册中心，并且这个注册中心上已经有服务在跑。OpenFeign的本质只是省略IP端口的配置，这些配置由注册中心来做。**
+
+
+
+FeignApplication.java
+
+```java
+package com.example.feignprovider;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+
+@SpringBootApplication  //springboot启动注解
+@EnableFeignClients     //启用OpenFeign
+public class FeignProviderApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(FeignProviderApplication.class, args);
+    }
+
+}
+```
+
+
+
+ServiceInterface.java
+
+```java
+package com.example.feignprovider.service;
+
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+
+/**
+ * @author -- gatsby
+ * @date -- 2022/4/23
+ * @description -- Port Service
+ */
+
+
+@Component
+@FeignClient(value = "eureka-client-provider")
+public interface PortService {
+    @RequestMapping(value = "/provider/port", method = RequestMethod.GET)
+    String getPort();
+}
+```
+
+**这是OpenFeign的关键调用，OpenFeign通过注解@FeignClient来向Eureka请求，value值就是在Eureka中注册的那个服务，此时在Eureka服务器中，有一个服务注册为eureka-client-provider，通过注解@FeignClient获取到这个服务，然后在接口的方法中定义这个服务的请求地址`/provider/port`，这样我们就无需知道IP地址或者端口，而是直接调用这个服务的这个方法，并且注入进我们自己的interface。**
+
+
+
+Controller.java
+
+```java
+package com.example.feignprovider.controller;
+
+import com.example.feignprovider.service.PortService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import javax.annotation.Resource;
+
+/**
+ * @author -- gatsby
+ * @date -- 2022/4/23
+ * @description -- Port Controller
+ */
+
+@RestController
+@RequestMapping(value = "/feign-provider")
+public class PortController {
+    PortService portService;
+
+    @Autowired
+    PortController(PortService portService) {
+        this.portService = portService;
+    }
+
+    @GetMapping(value = "/port")
+    public String getPort() {
+        return portService.getPort();
+    }
+}
+```
+
+这个服务的Controller，直接将Service注入，并且调用，再提供给对外的路径，如果将这个服务注册到Eureka，那么这个路径也将成为一个Eureka的FeignClient供别的服务调用。
+
 
 
 
