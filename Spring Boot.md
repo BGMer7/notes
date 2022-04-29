@@ -820,6 +820,205 @@ public void delete() {
 
 
 
+## interceptor
+
+interceptor和过滤器一样，都是面向切面编程----AOP的具体实现。
+
+interceptor可以用来执行某些任务，例如在Controller处理之前编写日志，添加或者更新配置。
+
+在Spring中，当请求发送到Controller时，在被Controller处理之前，必须经过多个Interceptor（0个或者多个）
+
+
+
+### functions
+
+常见的interceptor的功能：
+
+- 日志记录：记录请求信息的日志，以便进行信息监控，信息统计，计算PV（Page View）等等。
+- 权限检查：例如登录检查，进入Controller之前先检查用户是否已经登录。
+- 性能监控：通过拦截器在进入Controller之前先记录时间，在处理结束之后记录结束的时间，从而得到有效的处理时间。
+- 通用行为：读取Cookie得到用户的信息，并将用户对象放入请求，从而方便后续流程。
+
+
+
+Spring MVC提供了interceptor的拦截机制，用于请求的预处理的后处理。
+
+在开发一个网站时可能有这样的需求：某些页面只希望几个特定的用户浏览。 对于这样的访问权限控制，应该如何实现呢？拦截器就可以实现上述需求。在 Struts2 框架中，拦截器是其重要的组成部分，Spring MVC 框架也提供了拦截器功能。
+
+Spring MVC 的拦截器（Interceptor）与 Java Servlet 的过滤器（Filter）类似，它主要用于拦截用户的请求并做相应的处理，通常应用在权限验证、记录请求信息的日志、判断用户是否登录等功能上。
+
+### override
+
+在 Spring MVC 框架中定义一个拦截器需要对拦截器进行定义和配置，主要有以下 2 种方式。
+
+- 通过实现HandleInterceptor接口，或者继承HandleInterceptor的实现类，例如HandleInterceptorAdapter来定义自己的业务逻辑；
+- 通过实现WebRequestInterceptor接口或者继承WebRequestInterceptor接口的实现类
+
+一般来说通过HandleInterceptor来实现自定义的拦截器功能，需要实现HandleInterceptor的三个方法，分别是：
+
+`preHandle()`：该方法在Controller的处理请求方法执行之前执行，其返回值表示是否中断后续操作。返回true则表示继续向下执行，返回false表示中断后续操作。
+
+`postHandle()`：该方法表示在Controller的处理方法调用之后、解析视图之前，可以通过此方法对请求域中的模型和视图做进一步的修改。
+
+`afterCompletion()`：该方法在Controller的处理请求方法之后执行，即视图渲染之后执行，可以通过此方法实现一些资源清理、记录日志记录的工作。
+
+controller
+
+```java 
+@RestController
+public class LoginController {
+    @RequestMapping("/index")
+    public String index() {
+        return "index";
+    }
+    
+    @RequestMapping("/admin/login")
+    public String login(POJO pojo) {
+        return "login";
+    }
+}
+```
+
+实现`HandlerInterceptor`接口
+
+```java
+@Component
+public class LoginInterceptor implements HandlerInterceptor {
+    /***
+     * 在请求处理之前进行调用(Controller方法调用之前)
+     */
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        System.out.println("执行了拦截器的preHandle方法");
+        try {
+            HttpSession session = request.getSession();
+            //统一拦截（查询当前session是否存在user）(这里user会在每次登录成功后，写入session)
+            User user = (User) session.getAttribute("user");
+            if (user != null) {
+                return true;
+            }
+            response.sendRedirect(request.getContextPath() + "login");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+        //如果设置为false时，被请求时，拦截器执行到此处将不会继续操作
+        //如果设置为true时，请求将会继续执行后面的操作
+    }
+    
+    /***
+     * 请求处理之后进行调用，但是在视图被渲染之前（Controller方法调用之后）
+     */
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+        System.out.println("执行了拦截器的postHandle方法");
+    }
+    
+    /***
+     * 整个请求结束之后被调用，也就是在DispatchServlet渲染了对应的视图之后执行（主要用于进行资源清理工作）
+     */
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        System.out.println("执行了拦截器的afterCompletion方法");
+    }
+}
+```
+
+实现`WebMvcConfigurer`接口，注册拦截器
+
+```java
+@Configuration
+public class LoginConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        //注册TestInterceptor拦截器
+        InterceptorRegistration registration = registry.addInterceptor(new UserLoginInterceptor());
+        registration.addPathPatterns("/**"); //所有路径都被拦截
+        registration.excludePathPatterns(    //添加不拦截路径
+                "/login",                    //登录路径
+                "/**/*.html",                //html静态资源
+                "/**/*.js",                  //js静态资源
+                "/**/*.css"                  //css静态资源
+        );
+    }
+}
+
+```
+
+[SpringBoot 实现登录拦截器（实战版） - 云+社区 - 腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1860615)
+
+保持登录状态
+
+只需一次登录，如果登录过，下一次再访问的时候就无需再次进行登录拦截，可以直接访问网站里面的内容了。
+
+在正确登录之后，就将`user`保存到`session`中，再次访问页面的时候，登录拦截器就可以找到这个`user`对象，就不需要再次拦截到登录界面了.
+
+```java
+@RequestMapping(value = {"", "/", "/index"}, method = RequestMethod.GET)
+public String index(Model model, HttpServletRequest request) {
+    User user = (User) request.getSession().getAttribute("user");
+    model.addAttribute("user", user);
+    return "users/index";
+}
+
+@RequestMapping(value = {"/login"}, method = RequestMethod.GET)
+public String loginIndex() {
+    return "users/login";
+}
+
+@RequestMapping(value = {"/login"}, method = RequestMethod.POST)
+public String login(@RequestParam(name = "username")String username, @RequestParam(name = "password")String password,
+                    Model model, HttpServletRequest request) {
+    User user = userService.getPwdByUsername(username);
+    String pwd = user.getPassword();
+    String password1 = MD5Utils.md5Code(password).toUpperCase();
+    String password2 = MD5Utils.md5Code(password1).toUpperCase();
+    if (pwd.equals(password2)) {
+        model.addAttribute("user", user);
+        request.getSession().setAttribute("user", user);
+        return "redirect:/index";
+    } else {
+        return "users/failed";
+    }
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## MyBatis
+
+
+
+
+
+
+
+
+
+
+
+### 
+
+
+
+
+
 ## default class
 
 ### ApplicationListener
