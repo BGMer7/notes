@@ -37,6 +37,8 @@ OR population >= 25000000;
 
 
 
+
+
 #### [1757. 可回收且低脂的产品](https://leetcode.cn/problems/recyclable-and-low-fat-products/)
 
 表：`Products`
@@ -59,6 +61,8 @@ FROM Products
 WHERE low_fats = 'Y'
 AND recyclable = 'Y';
 ```
+
+
 
 
 
@@ -126,6 +130,92 @@ WHERE Orders.customerID IS NULL;
 
 
 
+
+
+
+### ORDER&UPDATE
+
+#### [1873. 计算特殊奖金](https://leetcode.cn/problems/calculate-special-bonus/)
+
+表: `Employees`
+
+| 列名        | 类型     |
+|--|--|
+| employee_id | int     |
+| name        | varchar |
+| salary      | int     |
+
+写出一个SQL 查询语句，计算每个雇员的奖金。如果一个雇员的id是奇数并且他的名字不是以'M'开头，那么他的奖金是他工资的100%，否则奖金为0。
+
+返回的结果集请按照`employee_id`排序。
+
+```SQL
+SELECT employee_id, 
+IF(employee_id%2=1 AND LEFT(name, 1) != 'M', salary, 0) AS Bonus
+FROM Employees;
+```
+
+
+
+
+
+#### [627. 变更性别](https://leetcode.cn/problems/swap-salary/)
+
+`Salary` 表：
+
+| Column Name | Type     |
+| -- | -- |
+| id          | int      |
+| name        | varchar  |
+| sex         | ENUM     |
+| salary      | int      |
+
+id 是这个表的主键。
+sex 这一列的值是 ENUM 类型，只能从 ('m', 'f') 中取。
+本表包含公司雇员的信息。
+
+请你编写一个 SQL 查询来交换所有的 'f' 和 'm' （即，将所有 'f' 变为 'm' ，反之亦然），仅使用 单个 update 语句 ，且不产生中间临时表。
+
+注意，你必须仅使用一条 update 语句，且 不能 使用 select 语句。
+
+solution 1:
+
+```SQL
+UPDATE Salary
+SET 
+	sex = CASE sex 
+		WHEN 'm' THEN 'f'
+		ELSE 'm'
+	END;
+```
+
+solution 2:
+
+```SQL
+UPDATE Salary
+SET sex = CHAR(ASCII('m') + ASCII('f') - ASCII(sex));
+```
+
+
+
+#### [196. 删除重复的电子邮箱](https://leetcode.cn/problems/delete-duplicate-emails/)
+
+表: `Person`
+
+| Column Name | Type    |
+| -- | -- |
+| id          | int     |
+| email       | varchar |
+
+编写一个 SQL 删除语句来 删除 所有重复的电子邮件，只保留一个id最小的唯一电子邮件。
+
+以 任意顺序 返回结果表。 （注意： 仅需要写删除语句，将自动对剩余结果进行查询）
+
+```SQL
+DELETE P2 
+FROM Person p1, Person p2
+WHERE  P1.ID < P2.ID AND P1.EMAIL = P2.EMAIL;
+```
 
 
 
