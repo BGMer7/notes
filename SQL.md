@@ -133,7 +133,7 @@ WHERE Orders.customerID IS NULL;
 
 
 
-### ORDER&UPDATE
+### ORDER & UPDATE
 
 #### [1873. 计算特殊奖金](https://leetcode.cn/problems/calculate-special-bonus/)
 
@@ -216,6 +216,181 @@ DELETE P2
 FROM Person p1, Person p2
 WHERE  P1.ID < P2.ID AND P1.EMAIL = P2.EMAIL;
 ```
+
+
+
+
+
+### STRING & REGEX
+
+#### [1667. 修复表中的名字](https://leetcode.cn/problems/fix-names-in-a-table/)
+
+表： `Users`
+
+| Column Name    | Type    |
+|-- | -- |
+| user_id        | int     |
+| name           | varchar |
+
+编写一个 SQL 查询来修复名字，使得只有第一个字符是大写的，其余都是小写的。
+
+返回按 `user_id` 排序的结果表。
+
+```SQL
+SELECT user_id, 
+CONCAT(UCASE(LEFT(NAME, 1)), LCASE(STRING(NAME, 2))) AS name
+FROM Users
+ORDER BY user_id;
+```
+
+
+
+
+
+#### [1484. 按日期分组销售产品](https://leetcode.cn/problems/group-sold-products-by-the-date/)
+
+表 `Activities`：
+
+| 列名         | 类型    |
+| -- | -- |
+| sell_date   | date    |
+| product     | varchar |
+
+编写一个 SQL 查询来查找每个日期、销售的不同产品的数量及其名称。
+每个日期的销售产品名称应按词典序排列。
+返回按 sell_date 排序的结果表。
+
+```SQL
+SELECT sell_date,
+	COUNT(DISTINCT PRODUCT) num_sold,
+	GROUP_CONCAT(DISTINCT PRODUCT) products
+FROM Activities
+ORDER BY sell_date
+GROUP BY sell_date;
+```
+
+
+
+
+
+#### [1527. 患某种疾病的患者](https://leetcode.cn/problems/patients-with-a-condition/)
+
+患者信息表： `Patients`
+
+| Column Name  | Type    |
+|-- | -- |
+| patient_id   | int     |
+| patient_name | varchar |
+| conditions   | varchar |
+
+写一条 SQL 语句，查询患有 I 类糖尿病的患者 ID （patient_id）、患者姓名（patient_name）以及其患有的所有疾病代码（conditions）。I 类糖尿病的代码总是包含前缀 DIAB1 。
+
+```sqL
+SELECT * FROM PATIENTS
+WHERE CONDITIONS REGEXP '^DIAB1|\\sDIAB1'
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
