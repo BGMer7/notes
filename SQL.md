@@ -294,51 +294,204 @@ WHERE CONDITIONS REGEXP '^DIAB1|\\sDIAB1'
 
 
 
+### GROUP & UNION SELECT
+
+#### [1965. 丢失信息的雇员](https://leetcode.cn/problems/employees-with-missing-information/)
+
+表: `Employees`
+
+| Column Name | Type    |
+| -- | -- |
+| employee_id | int     |
+| name        | varchar |
+
+表: `Salaries`
+
+| Column Name | Type    |
+| -- | -- |
+| employee_id | int     |
+| salary      | int     |
+
+写出一个查询语句，找到所有 丢失信息 的雇员id。当满足下面一个条件时，就被认为是雇员的信息丢失：
+
+雇员的 姓名 丢失了，或者
+雇员的 薪水信息 丢失了，或者
+返回这些雇员的id  employee_id ， 从小到大排序 。
+
+```SQL
+# Write your MySQL query statement below
+SELECT
+    employee_id 
+FROM 
+    (
+    SELECT employee_id FROM employees
+    UNION ALL
+    SELECT employee_id FROM salaries
+) AS t
+GROUP BY
+    employee_id
+HAVING
+    count(employee_id) = 1
+ORDER BY
+    employee_id;
+```
 
 
 
 
 
+#### [1795. 每个产品在不同商店的价格](https://leetcode.cn/problems/rearrange-products-table/)
+
+表：`Products`
+
+| Column Name | Type    |
+| -- | -- |
+| product_id  | int     |
+| store1      | int     |
+| store2      | int     |
+| store3      | int     |
+
+
+每行存储了这一产品在不同商店store1, store2, store3的价格。
+如果这一产品在商店里没有出售，则值将为null。
+
+请你重构 Products 表，查询每个产品在不同商店的价格，使得输出的格式变为(product_id, store, price) 。如果这一产品在商店里没有出售，则不输出这一行。
+
+```SQL
+SELECT product_id AS `product_id`, 
+'store1' AS `store`,
+store1 AS `price` FROM Products
+WHERE store1 IS NOT NULL
+
+UNION ALL
+
+SELECT product_id AS `product_id`, 
+'store2' AS `store`,
+store2 AS `price` FROM Products
+WHERE store2 IS NOT NULL
+
+UNION ALL
+
+SELECT product_id AS `product_id`, 
+'store3' AS `store`,
+store3 AS `price` FROM Products
+WHERE store3 IS NOT NULL;
+```
+
+
+
+#### [176. 第二高的薪水](https://leetcode.cn/problems/second-highest-salary/)
+
+| Column Name | Type |
+| -- | -- |
+| id          | int  |
+| salary      | int  |
+
+编写一个 SQL 查询，获取并返回 `Employee` 表中第二高的薪水 。如果不存在第二高的薪水，查询应该返回 `null` 。
+
+```sql
+SELECT (
+    SELECT DISTINCT salary AS `SecondHighestSalary`
+    FROM Employee
+    ORDER BY Salary DESC
+    LIMIT 1 OFFSET 1)
+AS `SecondHighestSalary`;
+```
+
+
+
+### MERGE
+
+#### [175. 组合两个表](https://leetcode.cn/problems/combine-two-tables/)
+
+表: `Person`
+
+| 列名         | 类型     |
+|-- | --| 
+| PersonId    | int     |
+| FirstName   | varchar |
+| LastName    | varchar |
+
+表: `Address`
+
+| 列名         | 类型    |
+| -- | -- |
+| AddressId   | int     |
+| PersonId    | int     |
+| City        | varchar |
+| State       | varchar |
+
+编写一个SQL查询来报告 `Person` 表中每个人的姓、名、城市和州。如果 `personId` 的地址不在 `Address` 表中，则报告为空  `null` 。
+
+```SQL
+SELECT FIRSTNAME AS `firstName`,
+LASTNAME AS `lastName`,
+CITY AS `city`,
+STATE AS `state`
+FROM PERSON
+LEFT JOIN ADDRESS ON PERSON.PERSONID = ADDRESS.PERSONID;
+```
 
 
 
 
 
+#### [1581. 进店却未进行过交易的顾客](https://leetcode.cn/problems/customer-who-visited-but-did-not-make-any-transactions/)
+
+表：`Visits`
+
+| Column Name | Type    |
+|--| --| 
+| visit_id    | int     |
+| customer_id | int     |
+
+表：`Transactions`
+
+| Column Name    | Type    |
+| -- | -- |
+| transaction_id | int     |
+| visit_id       | int     |
+| amount         | int     |
+
+有一些顾客可能光顾了购物中心但没有进行交易。请你编写一个 SQL 查询，来查找这些顾客的 ID ，以及他们只光顾不交易的次数。
+
+返回以 任何顺序 排序的结果表。
+
+```SQL
+SELECT CUSTOMER_ID AS `customer_id`,
+COUNT(CUSToMER_ID) AS `count_no_trans`
+FROM Visits
+LEFT JOIN TRANSACTION ON Visits.VISIT_ID = TRANSACTIONS.VISIT_ID
+WHERE AMOUNT IS NULL
+GROUP BY CUSTOMER_ID;
+```
 
 
 
 
 
+#### [1148. 文章浏览 I](https://leetcode.cn/problems/article-views-i/)
 
+`Views` 表：
 
+| Column Name   | Type    |
+| -- | -- | 
+| article_id    | int     |
+| author_id     | int     |
+| viewer_id     | int     |
+| view_date     | date    |
 
+此表无主键，因此可能会存在重复行。
+此表的每一行都表示某人在某天浏览了某位作者的某篇文章。
 
+请编写一条 SQL 查询以找出所有浏览过自己文章的作者，结果按照 id 升序排列。
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```sql
+SELECT DISTINCT AUTHOR_ID AS `id`
+FROM VIEWS
+WHERE AUTHOR_ID = VIEWER_ID
+ORDER BY AUTHOR_ID ASC;
+```
 
 
 
