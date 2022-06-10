@@ -1338,6 +1338,138 @@ public class Test {
 
 ### 12. ThreadLocal
 
+```java
+package com.gatsby.chapter14_concurrency;
+
+/**
+ * @author -- gatsby
+ * @date -- 2022/6/10
+ * @description -- ThreadLocal 测试
+ */
+
+
+public class ThreadLocalTest {
+    static ThreadLocal<String> local = new ThreadLocal<>();
+
+    static void print(String s) {
+        System.out.println(s + " " + local.get());
+        // 清除本地内存中的变量
+        // local.remove();
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        Thread t1 = new Thread(() -> {
+            local.set("local 1");
+            print("thread 1");
+            // 因为print之后会把ThreadLocal中的变量清除，此时再获取一次
+            System.out.println("after remove : " + local.get());
+        });
+
+        Thread t2 = new Thread(() -> {
+            local.set("local 2");
+            print("thread 2");
+            // 因为print之后会把ThreadLocal中的变量清除，此时再获取一次
+            System.out.println("after remove : " + local.get());
+        });
+
+        t1.start();
+        Thread.sleep(1000);
+        t2.start();
+        Thread.sleep(1000);
+        System.out.println(local.get());
+        Thread.sleep(1000);
+        /*
+        ThreadLocal的价值主要在于线程隔离，ThreadLocal中的数据仅属于当前线程，其本地值对于其他线程是不可见的。
+
+这个例子可以从上面的代码中发现，虽然local是一个静态变量，但是由于set是通过t1和t2的线程去赋值的，所以main线程通过local.get去获取local的值获取的结果是null
+		*/
+        local.set("thread 3");
+        System.out.println(local.get());
+    }
+}
+thread 1 local 1
+after remove : local 1
+thread 2 local 2
+after remove : local 2
+null
+thread 3
+```
+
+通过输出的结果可以看出，在ThreadLocal中，每一个线程都绑定了一个独立的值，这些值的对象是线程的私有属性。
+
+
+
+### 12-1. ThreadLocal的使用场景
+
+ThreadLocal是解决线程安全问题的一个较好的方案，它通过为每个线程提供一个独立的本地值去解决并发访问的冲突问题。
+
+在很多情况下，使用ThreadLocal比直接使用同步机制（如synchronized）解决线程安全问题更简单、更方便，且结果程序拥有更高的并发性。
+
+ThreadLocal的使用场景大致可以分为以下两个类别：
+
+1. 线程隔离
+
+   ThreadLocal的价值主要在于线程隔离，ThreadLocal中的数据仅属于当前线程，其本地值对于其他线程是不可见的。
+
+   这个例子可以从上面的代码中发现，虽然local是一个静态变量，但是由于set是通过t1和t2的线程去赋值的，所以main线程通过local.get去获取local的值获取的结果是null。
+
+   由于各个线程之间的数据是相互隔离的，不需要加锁，也就避免了加锁带来的性能损失。大大提升了并发的性能。
+
+   线程隔离的情况下的场景有：
+
+   1. 为每一个用户绑定用户信息
+   2. 数据库连接
+   3. HTTP请求
+
+   常见的ThreadLocal使用场景为数据库连接独享、Session数据管理等。在“线程隔离”场景中，使用ThreadLocal的典型案例为：可以为每个线程绑定一个数据库连接，使得这个数据库连接为线程所独享，从而避免数据库连接被混用而导致操作异常问题。
+
+2. 跨函数传递数据
+
+   通常会涉及到同一个线程之内的多个类、方法传递数据，如果没有使用ThreadLocal的话，传递数据就需要依靠返回值和传参，这样无形中增加了类和方法之间的耦合度。
+
+   由于ThreadLocal的特性，同一线程在某些地方进行设置，在随后的任意地方都可以获取到。线程执行过程中所执行到的函数都能读写ThreadLocal变量的线程本地值，从而可以方便地实现跨函数的数据传递。使用ThreadLocal保存函数之间需要传递的数据，在需要的地方直接获取，也能避免通过参数传递数据带来的高耦合。
+
+
+
+### 12-2. ThreadLocal的内部结构
+
+在早期的JDK版本中，ThreadLocal的内部结构是一个Map，其中每一个线程实例作为Key，线程在“线程本地变量”中绑定的值为Value（本地值）。早期版本中的Map结构，其拥有者为ThreadLocal，每一个ThreadLocal实例拥有一个Map实例。
+
+在JDK 8版本中，ThreadLocal的内部结构发生了演进，虽然还是使用了Map结构，但是Map结构的拥有者已经发生了变化，其拥有者为Thread（线程）实例，每一个Thread实例拥有一个Map实例。另外，Map结构的Key值也发生了变化：新的Key为ThreadLocal实例。
+
+每一个线程在获取本地值时，**都会将ThreadLocal实例作为Key从自己拥有的ThreadLocalMap中获取值**，别的线程无法访问自己的ThreadLocalMap实例，自己也无法访问别人的ThreadLocalMap实例，达到相互隔离，互不干扰。
+
+改动的主要区别在于：
+
+1. 拥有者发生了变化：新版本的ThreadLocalMap拥有者为Thread，早期版本的ThreadLocalMap拥有者为ThreadLocal。
+2. Key发生了变化：新版本的Key为ThreadLocal实例，早期版本的Key为Thread实例。
+
+更新之后的版本优势在于：
+
+1. 每个ThreadLocalMap存储的“Key-Value对”数量变少。早期版本的“Key-Value对”数量与线程个数强关联，若线程数量多，则ThreadLocalMap存储的“Key-Value对”数量也多。新版本的ThreadLocalMap的Key为ThreadLocal实例，多线程情况下ThreadLocal实例比线程数少。
+2. 早期版本ThreadLocalMap的拥有者为ThreadLocal，在Thread（线程）实例销毁后，ThreadLocalMap还是存在的；新版本的ThreadLocalMap的拥有者为Thread，现在当Thread实例销毁后，ThreadLocalMap也会随之销毁，在一定程度上能减少内存的消耗。
+
+
+
+### 12-2. ThreadLocal的使用规范
+
+编程规范有云：ThreadLocal实例作为ThreadLocalMap的Key，针对一个线程内的所有操作是共享的，所以建议设置static修饰符，以便被所有的对象共享。
+
+由于静态变量会在类第一次被使用时装载，只会分配一次存储空间，此类的所有实例都会共享这个存储空间，所以使用static修饰ThreadLocal就会节约内存空间。另外，为了确保ThreadLocal实例的唯一性，除了使用static修饰之外，还会使用final进行加强修饰，以防止其在使用过程中发生动态变更。
+
+```java
+// 推荐使用static final线程本地变量
+private static final ThreadLocal<T> threadLocal = new ThreadLocal<T>();
+```
+
+以上代码中，为什么ThreadLocal实例除了添加static final修饰外，还常常添加private修饰呢？
+
+主要目的是缩小使用的范围，尽可能不让他人引用。
+
+凡事都有两面性，使用static、final修饰ThreadLocal实例也会带来副作用，使得Thread实例内部的ThreadLocalMap中Entry的Key在Thread实例的生命期内将始终保持为非null，从而导致Key所在的Entry不会被自动清空，这就会让Entry中的Value指向的对象一直存在强引用，于是Value指向的对象在线程生命期内不会被释放，最终导致内存泄漏。
+
+所以，在使用完static、final修饰的ThreadLocal实例之后，**必须调用remove()来进行显式的释放操作**。如果使用线程池，可以定制线程池的afterExecute()方法（任务执行完成之后的钩子方法），在任务执行完成之后，调用ThreadLocal实例的remove()方法对其进行释放，从而使得其线程内部的Entry得以释放，参考的代码如下：
+
 
 
 
@@ -1362,7 +1494,7 @@ public class Test {
 
 
 
-### 16. synchronized和ReenTrantLock
+### 16. synchronized和ReentrantLock
 
 
 
@@ -1409,11 +1541,40 @@ public class Test {
 
 ### 20. 乐观锁常用的两种实现方式
 
+乐观锁常用的两种机制是版本号和CAS
 
+- 版本号机制
+
+  一般是在数据表中加入一个版本号version字段，表示数据被修改的次数，当数据被修改时，version会向上累加。当线程 A 要更新数据值时，在读取数据的同时也会读取 version 值，在提交更新时，若刚才读取到的 version 值为当前数据库中的 version 值相等时才更新，否则重试更新操作，直到更新成功。
+
+- CAS
+
+  Compare And Swap，是一种著名的无锁算法。
+
+  无锁算法也就是在不使用锁的条件写实现多线程之间的变量同步，也就是在没有线程阻塞的情况下实现变量的同步。
+
+  CAS涉及到三个主要的参数，
+
+  1. 需要读写的内存值V
+  2. 进行比较的新的数值A
+  3. 将要被写入的数值B
+
+  当且仅当，内存V的数值等于A的时候，使用数值B来进行写入。这是一个原子操作，否则不会进行任何操作，也就是一个自旋，会导致CPU空转，进行不断地重试。
 
 
 
 ### 21. CAS和synchronized
+
+一般来说，CAS比较适用于那些写操作较少的场景（读场景较多）
+
+synchronized适用于写比较多的情况（因为一般来说，同时写的场景容易出现冲突）
+
+1. 对于资源竞争，线程冲突较少的情况，CAS基于硬件实现，不需要进入内核，不需要切换线程，自旋的几率会比较小；使用synchronized同步锁进行线程阻塞和唤醒切换用户态内核态的切换操作，会额外浪费CPU，这种情况会更加适用于CAS。
+2. 对于资源竞争严重（线程冲突严重）的情况，如果采用CAS的话，会出现大量自旋，CPU资源被浪费，这种情况直接采用synchronized会更加合适。
+
+
+
+
 
 
 
@@ -1536,6 +1697,222 @@ public class Test {
 
 
 ### 36. Java内存模型
+
+
+
+
+
+### 37. Java线程池
+
+线程池（ThreadPool）是一种基于池化思想管理和使用线程的机制。它是将多个线程预先存储在一个“池子”内，当有任务出现时可以避免重新创建和销毁线程所带来性能开销，只需要从“池子”内取出相应的线程执行对应的任务即可。
+
+在阿里巴巴开发规范手册中规定，线程资源必须通过线程池创建，不允许在应用中自行显式创建线程。使用线程池的好处是减少在创建和销毁线程上所花的时间以及系统资源的开销，解决资源不足的问题。如果不使用线程池，有可能造成系统创建大量同类线程而导致消耗完内存或者“过度切换”的问题。
+
+线程池不允许使用 Executors，而是通过ThreadPoolExecutor的方式。
+
+> 使用Executors的弊端在于，FixedThreadPool 和 SingleThread Pool会导致请求队列太长，导致OOM错误。
+>
+> CachedThreadPool 和 ScheduledThreadPool允许创建的线程数量太多，有可能导致OOM。
+
+
+
+
+
+### 38. ThreadPoolExecutor
+
+[java线程池ThreadPoolExecutor类使用详解 - bigfan - 博客园 (cnblogs.com)](https://www.cnblogs.com/dafanjoy/p/9729358.html)
+
+[线程池详解（ThreadPoolExecutor） - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/34405230)
+
+ThreadPoolExecutor的构造函数
+
+```java 
+public ThreadPoolExecutor(int corePoolSize,
+                          int maximumPoolSize,
+                          long keepAliveTime,
+                          TimeUnit unit,
+                          BlockingQueue<Runnable> workQueue) {
+    this(corePoolSize, maximumPoolSize, keepAliveTime, unit, workQueue,
+         Executors.defaultThreadFactory(), defaultHandler);
+}
+```
+
+corePoolSize：指定了线程池中的线程数量，它的数量决定了添加的任务是开辟新的线程去执行，还是放到workQueue任务队列中去；
+
+maximumPoolSize：指定了线程池中的最大线程数量，这个参数会根据你使用的workQueue任务队列的类型，决定线程池会开辟的最大线程数量；
+
+keepAliveTime：当线程池中空闲线程数量超过corePoolSize时，多余的线程会在多长时间内被销毁；
+
+unit：keepAliveTime的单位
+
+workQueue：任务队列，被添加到线程池中，但尚未被执行的任务；它一般分为直接提交队列、有界任务队列、无界任务队列、优先任务队列几种；
+
+threadFactory：线程工厂，用于创建线程，一般用于默认即可
+
+handle：拒绝策略，当任务太多的时候，选择什么拒绝策略
+
+[ThreadPoolExecutor使用详解 - WakamiyaShinobu - 博客园 (cnblogs.com)](https://www.cnblogs.com/zedosu/p/6665306.html)
+
+```java
+package com.gatsby.chapter14_concurrency;
+
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
+/**
+ * @author -- gatsby
+ * @date -- 2022/6/8
+ * @description -- 线程池测试
+ */
+
+
+public class ThreadPoolExecutorTest {
+    private static int CORE_POOL_SIZE = 6;
+    private static int MAXIMUM_POOL_SIZE = 10;
+    private static int KEEP_ALIVE_TIME = 60;
+    private static TimeUnit TIME_UNIT = TimeUnit.SECONDS;
+    private static BlockingDeque<Runnable> BLOCKING_QUEUE = new LinkedBlockingDeque();
+
+    /*
+    创建一个线程池（完整的入参）
+    核心线程数为 5
+    最大线程数为 10
+    存活时间为 60s
+    工作队列为 LinkedBlockingDeque
+    线程工厂为默认的 defaultThreadFactory
+    拒绝策略为抛出异常
+     */
+    private static ExecutorService THREAD_POOL
+            = new ThreadPoolExecutor(CORE_POOL_SIZE, MAXIMUM_POOL_SIZE, KEEP_ALIVE_TIME,
+            TIME_UNIT, BLOCKING_QUEUE, Executors.defaultThreadFactory(),
+            new ThreadPoolExecutor.AbortPolicy());
+
+    public void destory() {
+        if (THREAD_POOL != null) {
+            THREAD_POOL.shutdown();
+        }
+    }
+
+    public ExecutorService getThreadPool() {
+        return THREAD_POOL;
+    }
+
+    private class CustomThreadFactory implements ThreadFactory {
+        private AtomicInteger count = new AtomicInteger(0);
+
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread t = new Thread(r);
+            String threadName = ThreadPoolExecutorTest.class.getName() + count.addAndGet(1);
+            System.out.println(threadName);
+            t.setName(threadName);
+            return t;
+        }
+    }
+
+    private class CustomRejectionExecutionHandler implements RejectedExecutionHandler {
+        @Override
+        public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
+            try {
+                executor.getQueue().put(r);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
+    public static void main(String[] args) {
+        ThreadPoolExecutorTest test = new ThreadPoolExecutorTest();
+        ExecutorService pool = test.getThreadPool();
+        for (int i = 0; i < 10; ++i) {
+            System.out.println("Commit the " + i + "st task.");
+
+            pool.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        System.out.println(">>>Task is running=====");
+                        TimeUnit.SECONDS.sleep(1);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        }
+    }
+}
+```
+
+
+
+### 39. 线程池的工作流程
+
+<img src="https://pic4.zhimg.com/v2-885830dd498528ca7e277f9d930fcac3_r.jpg" alt="preview" style="zoom:50%;" />
+
+
+
+1. 默认情况下，创建了线程池之后并不会直接创建线程，而是有任务提交的时候才会创建线程来进行处理。（除非调用prestartCoreThread或prestartAllCoreThreads方法）
+2. 当线程数小于核心线程数时，每提交一个任务就创建一个线程来执行，即使当时有线程处于空闲状态，直到当前的线程数到达了核心线程数。
+3. 当前线程数到达核心线程数之后，如果此时还在提交任务，这些任务会被存储到工作队列中，等到有空闲的线程再来工作队列中取得任务。
+4. 当前线程数到达核心线程数并且工作队列也满了之后，如果此时还提交任务，那么会继续创建新的线程来处理任务，直到到达最大线程数。
+5. 当前线程数达到最大线程数并且工作队列也已经满了，如果此时还提交任务，那么就需要采用拒绝策略，也称为饱和策略。
+6. 如果某个线程的控线时间超过了keepAliveTime，那么将被标记为可回收的，并且当前线程池的当前大小超过了核心线程数时，这个线程将被终止。
+
+
+
+### 40. 线程池的工作队列
+
+如果新请求的到达速率超过了线程池的处理速率，那么新到来的请求将累积起来。在线程池中，这些请求会在一个由Executor管理的Runnable队列中等待，而不会像线程那样去竞争CPU资源。
+
+常见的工作队列有以下几种，前三种用的最多。
+
+1. ArrayBlockingQueue：列表形式的工作队列，必须要有初始队列大小，有界队列，先进先出。
+2. LinkedBlockingQueue：链表形式的工作队列，可以选择设置初始队列大小，有界/无界队列，先进先出。
+3. SynchronousQueue：SynchronousQueue不是一个真正的队列，而是一种在线程之间移交的机制。要将一个元素放入SynchronousQueue中，必须有另一个线程正在等待接受这个元素。如果没有线程等待，并且线程池的当前大小小于最大值，那么ThreadPoolExecutor将创建一个线程, 否则根据饱和策略，这个任务将被拒绝。使用直接移交将更高效，因为任务会直接移交给执行它的线程，而不是被首先放在队列中，然后由工作者线程从队列中提取任务。只有当线程池是无解的或者可以拒绝任务时，SynchronousQueue才有实际价值.
+4. PriorityBlockingQueue：优先级队列，有界队列，根据优先级来安排任务，任务的优先级是通过自然顺序或Comparator（如果任务实现了Comparator）来定义的。
+5. DelayedWorkQueue：延迟的工作队列，无界队列。
+
+
+
+### 41. 饱和策略（拒绝策略）
+
+当有界队列被填满后，饱和策略开始发挥作用。ThreadPoolExecutor的饱和策略可以通过调用setRejectedExecutionHandler来修改。（如果某个任务被提交到一个已被关闭的Executor时，也会用到饱和策略）。饱和策略有以下四种，一般使用默认的AbortPolicy。
+
+1. AbortPolicy：中止策略。默认的饱和策略，抛出未检查的RejectedExecutionException。调用者可以捕获这个异常，然后根据需求编写自己的处理代码。
+2. DiscardPolicy：抛弃策略。当新提交的任务无法保存到队列中等待执行时，该策略会悄悄抛弃该任务。
+3. DiscardOldestPolicy：抛弃最旧的策略。当新提交的任务无法保存到队列中等待执行时，则会抛弃下一个将被执行的任务，然后尝试重新提交新的任务。（如果工作队列是一个优先队列，那么“抛弃最旧的”策略将导致抛弃优先级最高的任务，因此最好不要将“抛弃最旧的”策略和优先级队列放在一起使用）。
+4. CallerRunsPolicy：调用者运行策略。该策略实现了一种调节机制，该策略既不会抛弃任务，也不会抛出异常，而是将某些任务回退到调用者（调用线程池执行任务的主线程），从而降低新任务的流程。它不会在线程池的某个线程中执行新提交的任务，而是在一个调用了execute的线程中执行该任务。当线程池的所有线程都被占用，并且工作队列被填满后，下一个任务会在调用execute时在主线程中执行（调用线程池执行任务的主线程）。由于执行任务需要一定时间，因此主线程至少在一段时间内不能提交任务，从而使得工作者线程有时间来处理完正在执行的任务。在这期间，主线程不会调用accept，因此到达的请求将被保存在TCP层的队列中。如果持续过载，那么TCP层将最终发现它的请求队列被填满，因此同样会开始抛弃请求。当服务器过载后，这种过载情况会逐渐向外蔓延开来——从线程池到工作队列到应用程序再到TCP层，最终达到客户端，导致服务器在高负载下实现一种平缓的性能降低。
+
+
+
+
+
+### 42. 线程工厂
+
+每当线程池需要创建一个线程时，都是通过线程工厂方法来完成的。在ThreadFactory中只定义了一个方法newThread，每当线程池需要创建一个新线程时都会调用这个方法。Executors提供的线程工厂有两种，一般使用默认的，当然如果有特殊需求，也可以自己定制。
+
+1. DefaultThreadFactory：默认线程工厂，创建一个新的、非守护的线程，并且不包含特殊的配置信息。
+2. PrivilegedThreadFactory：通过这种方式创建出来的线程，将与创建privilegedThreadFactory的线程拥有相同的访问权限、 AccessControlContext、ContextClassLoader。如果不使用privilegedThreadFactory， 线程池创建的线程将从在需要新线程时调用execute或submit的客户程序中继承访问权限。
+3. 自定义线程工厂：可以自己实现ThreadFactory接口来定制自己的线程工厂方法。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
