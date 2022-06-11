@@ -495,31 +495,77 @@ ORDER BY AUTHOR_ID ASC;
 
 
 
+#### [197. 上升的温度](https://leetcode.cn/problems/rising-temperature/)
+
+表： `Weather`
+
+| Column Name   | Type    |
+| -- | -- |
+| id            | int     |
+| recordDate    | date    |
+| temperature   | int     |
+
+编写一个 SQL 查询，来查找与之前（昨天的）日期相比温度更高的所有日期的 `id` 。
+
+返回结果 **不要求顺序** 。
+
+```SQL
+SELECT B.ID
+FROM WEATHER AS A
+INNER JOIN WEATHER AS B
+WHERE DATEDIFF(B.recordDate, A.recordDate) = 1
+AND B.TEMPERATURE > A.TEMPERATURE
+GROUP BY B.ID;
+```
 
 
 
 
 
+#### [607. 销售员](https://leetcode.cn/problems/sales-person/)
+
+表: `SalesPerson`
+
+| Column Name     | Type    |
+| -- | -- |
+| sales_id        | int     |
+| name            | varchar |
+| salary          | int     |
+| commission_rate | int     |
+| hire_date       | date    |
 
 
 
+表: `Orders`
+| Column Name     | Type    |
+| -- | -- |
+| order_id    | int  |
+| order_date  | date |
+| com_id      | int  |
+| sales_id    | int  |
+| amount      | int  |
 
 
 
+表: `Company`
+| Column Name     | Type    |
+| -- | -- |
+| com_id      | int     |
+| name        | varchar |
+| city        | varchar 
 
+编写一个SQL查询，报告没有任何与名为 **“RED”** 的公司相关的订单的所有销售人员的姓名。
 
+以 **任意顺序**
 
-
-
-
-
-
-
-
-
-
-
-
+```sql
+SELECT `name` FROM SALESPERSON
+WHERE SALES_ID NOT IN (
+    SELECT O.SALES_ID FROM ORDERS AS O
+    LEFT JOIN COMPANY AS C ON C.COM_ID = O.COM_ID
+    WHERE C.NAME = 'RED'
+);
+```
 
 
 
