@@ -571,25 +571,84 @@ WHERE SALES_ID NOT IN (
 
 
 
+### FUNCTION
+
+#### [1141. 查询近30天活跃用户数](https://leetcode.cn/problems/user-activity-for-the-past-30-days-i/)
+
+活动记录表：`Activity`
+
+| Column Name   | Type    |
+| -- | -- |
+| user_id       | int     |
+| session_id    | int     |
+| activity_date | date    |
+| activity_type | enum    |
+
+该表是用户在社交网站的活动记录。
+该表没有主键，可能包含重复数据。
+activity_type 字段为以下四种值 ('open_session', 'end_session', 'scroll_down', 'send_message')。
+每个 session_id 只属于一个用户。
+
+请写SQL查询出截至 `2019-07-27`（包含2019-07-27），近 `30` 天的每日活跃用户数（当天只要有一条活动记录，即为活跃用户）。
+
+```sql
+SELECT ACTIVITY_DATE AS `day`,
+COUNT(DISTINCT USER_ID) AS `active_users`
+FROM Activity
+WHERE DATEDIFF('2019-07-27', activity_date) >= 0 AND DATEDIFF('2019-07-27', activity_date) < 30
+GROUP BY activity_date;
+```
 
 
 
 
 
+#### [1693. 每天的领导和合伙人](https://leetcode.cn/problems/daily-leads-and-partners/)
+
+表：`DailySales`
+
+| Column Name | Type    |
+| -- | -- |
+| date_id     | date    |
+| make_name   | varchar |
+| lead_id     | int     |
+| partner_id  | int     |
+
+写一条 SQL 语句，使得对于每一个 `date_id` 和 `make_name`，返回**不同**的 `lead_id` 以及**不同**的 `partner_id` 的数量。
+
+```SQL
+SELECT date_id,
+make_name,
+COUNT(DISTINCT lead_id) AS `unique_leads`,
+COUNT(DISTINCT partner_id) AS `unique_partners`
+FROM DailySales
+GROUP BY date_id, make_name;
+```
 
 
 
 
 
+#### [1729. 求关注者的数量](https://leetcode.cn/problems/find-followers-count/)
 
+表： `Followers`
 
+| Column Name | Type |
+| -- | -- | 
+| user_id     | int  |
+| follower_id | int  |
 
+写出 SQL 语句，对于每一个用户，返回该用户的关注者数量。
 
+按 `user_id` 的顺序返回结果表。
 
-
-
-
-
+```SQL
+SELECT DISTINCT USER_ID AS `user_id`,
+COUNT(*) AS `followers_count`
+FROM FOLLOWERS
+GROUP BY USER_ID
+ORDER BY USER_ID;
+```
 
 
 
