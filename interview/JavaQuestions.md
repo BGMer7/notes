@@ -617,6 +617,78 @@ public static void main(String[] args) {
 
 
 
+### 29-1. 动态代理的本质
+
+1. 动态代理类对应的class文件
+
+   首先需要了解Java源文件实例对象的一个简单的流程：
+
+   <img src="https://pic4.zhimg.com/v2-dc600925916a238e6871a4354a4c42af_r.jpg" alt="preview" style="zoom: 50%;" />
+
+   Java文件->class文件（字节码）->class对象->实例对象
+
+2. 动态代理的本质
+
+   动态代理的本质是省略了.java文件，因为我们实际上并没有编写相应的Java代码，但是我们直接使用了字节码，也就是class文件。所以动态代理的实际本质是省略源文件的编写，直接在运行期生成class文件。
+
+
+
+### 29-1. 动态代理的原理
+
+动态代理最主要的几个原生类：
+
+1. java.lang.reflect.InvocationHandler;
+
+   ```Java
+   public interface InvocationHandler {
+       public Object invoke(Object proxy, Method method, Object[] args)
+           throws Throwable;
+   }
+   ```
+
+2. java.lang.reflect.Proxy;
+
+```java
+public class ProxyHandler implements InvocationHandler {
+    private Object object;
+
+    ProxyHandler(Object object) {
+        this.object = object;
+    }
+
+    /*
+     重写这部分的业务逻辑
+     */
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        System.out.println("Before invoke "  + method.getName());
+        method.invoke(object, args);
+        System.out.println("After invoke " + method.getName());
+        return null;
+    }
+}
+```
+
+有了NewProxy之后，最关键的两步就是
+
+```java 
+// 先利用实体类创建一个实体Impls
+InvocationHandler handler = new ProxyHandler(hello);
+// 使用Proxy类的静态方法
+IHello proxyHello = (IHello) Proxy.newProxyInstance(hello.getClass().getClassLoader(), 																			hello.getClass().getInterfaces(), 
+                                                    handler);
+```
+
+
+
+
+
+
+
+
+
+
+
 ### 30. static
 
 （1）静态变量：又称为类变量，也就是说这个变量属于类的，类所有的实例都共享静态变量，可以直接通过类名来访问它。静态变量在内存中只存在一份；
@@ -1642,9 +1714,17 @@ synchronized适用于写比较多的情况（因为一般来说，同时写的�
 
 ### 29. Thread pool
 
+Java创建线程的代价非常高，需要JVM和OS配合创建：
+
+1. 因为需要为线程分配和初始化大量的内存块，其中至少包含1MB的占内存。
+2. 需要进行系统调用，以便在OS中创建和注册本地线程。
 
 
 
+Java高并发应用频繁创建和销毁线程的操作是非常低效的，而且是不被编程规范所允许的。如何降低Java线程的创建成本？必须使用到线程池。使用线程池主要有两个方面的优势。
+
+1. **提升性能**：线程池能独立负责线程的创建、维护和分配。在执行大量异步任务时，可以不需要自己创建线程，而是将任务交给线程池去调度。线程池能尽可能使用空闲的线程去执行异步任务，最大限度地对已经创建的线程进行复用，使得性能提升明显。
+2. **线程管理**：每个Java线程池会保持一些基本的线程统计信息，例如完成的任务数量、空闲时间等，以便对线程进行有效管理，使得能对所接收到的异步任务进行高效调度。
 
 
 
