@@ -526,27 +526,597 @@ public class PortController {
 
 ### Nacos和Eureka
 
+Nacos和Eureka都是提供注册中心和服务治理的服务，主要有以下区别：
+
+1. 功能差异
+
+   | 模块     | Nacos | Eureka | 说明                                                         |
+   | -------- | ----- | ------ | ------------------------------------------------------------ |
+   | 注册中心 | 是    | 是     | 服务治理基本功能，负责服务中心化注册                         |
+   | 配置中心 | 是    | 否**** | **Eureka需要配合Config实现配置中心，且不提供管理界面**       |
+   | 动态刷新 | 是    | **否** | **Eureka需要配合MQ实现配置动态刷新，Nacos采用Netty保持TCP长连接实时推送** |
+   | 可用区AZ | 是    | 是     | 对服务集群划分不同区域，实现区域隔离，并提供容灾自动切换     |
+   | 分组     | 是    | **否** | **Nacos可用根据业务和环境进行分组管理**                      |
+   | 元数据   | 是    | 是     | 提供服务标签数据，例如环境或服务标识                         |
+   | 权重     | 是    | **否** | **Nacos默认提供权重设置功能，调整承载流量压力**              |
+   | 健康检查 | 是    | 是     | Nacos支持由客户端或服务端发起的健康检查，Eureka是由客户端发起心跳 |
+   | 负载均衡 | 是    | 是     | 均提供负责均衡策略，Eureka采用Ribbon                         |
+   | 管理界面 | 是    | **否** | **Nacos支持对服务在线管理，Eureka只是预览服务状态**          |
+
+2. 部署安装
+
+   | 模块     | Nacos    | Eureka                  | 说明                                   |
+   | -------- | -------- | ----------------------- | -------------------------------------- |
+   | MySql    | 是       | **否**                  | Nacos需要采用MySql进行数据进行持久化   |
+   | MQ       | **否**   | 是                      | Eureka需要采用MQ进行配置中心刷新       |
+   | 配置中心 | 是       | **否**                  | Eureka结合Config或者Consul实现配置中心 |
+   | 配置文件 | 在线编辑 | 本地文件或者Git远程文件 | Eureka结合Config或者Consul             |
+   | 集群     | 是       | 是                      | Nacos需要配置集群ip再启动              |
+
+3. 选型建议
+
+   采用Eureka方案的考虑
+
+   - 想用Spring Cloud原生全家桶
+   - 想用本地文件和Git作为配置管理的,将配置与服务分开管理
+   - 考虑短期的稳定性
+
+   采用Nacos方案的考虑
+
+   - 想在线对服务进行上下线和流量管理
+   - 不想采用MQ实现配置中心动态刷新
+   - 不想新增配置中心生产集群
+   - 考虑引入Spring Cloud Alibaba生态
+
+
+
+Nacos的部署方式与Spring Cloud Eureka不太一样，Euraka是需要创建Spring Boot项目，然后将Euraka服务端通过gav的方式加载进来，然后部署项目。Nacos是直接从阿里巴巴Nacos的官网下载jar包，启动服务。
+
+Eureka Server之间通过复制的方式完成数据的同步，Eureka还提供了客户端缓存机制，即使所有的Eureka Server都挂掉，客户端依然可以利用缓存中的信息消费其他服务的API。综上，Eureka通过心跳检查、客户端缓存等机制，确保了系统的高可用性、灵活性和可伸缩性。
+
+
+
+### Nacos两大组件
+
+| 组件         | 描述                                                         | 功能                                                         |
+| ------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Nacos Server | Nacos 服务端，与 Eureka Server 不同，Nacos Server 由阿里巴巴团队使用 Java 语言编写并将 Nacos Server 的下载地址给用户，用户只需要直接下载并运行即可。 | Nacos Server 可以作为服务注册中心，帮助 Nacos Client 实现服务的注册与发现。 |
+|              |                                                              | Nacos Server 可以作为配置中心，帮助 Nacos Client 在不重启的情况下，实现配置的动态刷新。 |
+| Nacos Client | Nacos 客户端，通常指的是微服务架构中的各个服务，由用户自己搭建，可以使用多种语言编写。 | Nacos Client 通过添加依赖 spring-cloud-starter-alibaba-nacos-discovery，在服务注册中心（Nacos Server）中实现服务的注册与发现。 |
+|              |                                                              | Nacos Client 通过添加依赖 spring-cloud-starter-alibaba-nacos-config，在配置中心（Nacos Server）中实现配置的动态刷新。 |
+
+
+
+### Nacos Server
+
+从Nacos官网或者GitHub下载zip，解压之后进入bin目录，直接运行脚本。
+
+```shell
+"nacos is starting with standalone"
+
+         ,--.
+       ,--.'|
+   ,--,:  : |                                           Nacos 2.1.0
+,`--.'`|  ' :                       ,---.               Running in stand alone mode, All function modules
+|   :  :  | |                      '   ,'\   .--.--.    Port: 8848
+:   |   \ | :  ,--.--.     ,---.  /   /   | /  /    '   Pid: 16128
+|   : '  '; | /       \   /     \.   ; ,. :|  :  /`./   Console: http://192.168.0.101:8848/nacos/index.html
+'   ' ;.    ;.--.  .-. | /    / ''   | |: :|  :  ;_
+|   | | \   | \__\/: . ..    ' / '   | .; : \  \    `.      https://nacos.io
+'   : |  ; .' ," .--.; |'   ; :__|   :    |  `----.   \
+|   | '`--'  /  /  ,.  |'   | '.'|\   \  /  /  /`--'  /
+'   : |     ;  :   .'   \   :    : `----'  '--'.     /
+;   |.'     |  ,     .-./\   \  /            `--'---'
+'---'        `--`---'     `----'
+
+2022-06-13 16:12:27,077 INFO Bean 'org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler@5149f008' of type [org.springframework.security.access.expression.method.DefaultMethodSecurityExpressionHandler] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+
+2022-06-13 16:12:27,085 INFO Bean 'methodSecurityMetadataSource' of type [org.springframework.security.access.method.DelegatingMethodSecurityMetadataSource] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying)
+
+2022-06-13 16:12:28,010 INFO Tomcat initialized with port(s): 8848 (http)
+
+2022-06-13 16:12:28,553 INFO Root WebApplicationContext: initialization completed in 4613 ms
+
+2022-06-13 16:12:44,853 INFO Initializing ExecutorService 'applicationTaskExecutor'
+
+2022-06-13 16:12:44,991 INFO Adding welcome page: class path resource [static/index.html]
+
+2022-06-13 16:12:45,321 INFO Creating filter chain: Ant [pattern='/**'], []
+
+2022-06-13 16:12:45,350 INFO Creating filter chain: any request, [org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@701bc94e, org.springframework.security.web.context.SecurityContextPersistenceFilter@7d5508e0, org.springframework.security.web.header.HeaderWriterFilter@25e49cb2, org.springframework.security.web.csrf.CsrfFilter@5a8cbffe, org.springframework.security.web.authentication.logout.LogoutFilter@68fe48d7, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@37ed010a, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@5b84f14, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@3d8b319e, org.springframework.security.web.session.SessionManagementFilter@23382f76, org.springframework.security.web.access.ExceptionTranslationFilter@61e7bf2f]
+
+2022-06-13 16:12:45,430 INFO Initializing ExecutorService 'taskScheduler'
+
+2022-06-13 16:12:45,455 INFO Exposing 2 endpoint(s) beneath base path '/actuator'
+
+2022-06-13 16:12:45,555 INFO Tomcat started on port(s): 8848 (http) with context path '/nacos'
+
+2022-06-13 16:12:45,560 INFO Nacos started successfully in stand alone mode. use embedded storage
+
+2022-06-13 16:14:04,312 INFO Initializing Servlet 'dispatcherServlet'
+
+2022-06-13 16:14:04,325 INFO Completed initialization in 12 ms
+```
+
+使用浏览器访问“http://localhost:8848/nacos”，跳转到 Nacos Server 登陆页面。默认的用户密码是nacos/nacos。
 
 
 
 
 
+### Nacos Provider
+
+**pom.xml**主要注意版本问题
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.3.3.RELEASE</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>com.gatsby</groupId>
+    <artifactId>provider</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>provider</name>
+    <description>Demo project for Spring Boot</description>
+    <properties>
+        <java.version>1.8</java.version>
+        <spring-cloud.version>2021.0.1</spring-cloud.version>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+            <version>2.1.0.RELEASE</version>
+        </dependency>
+
+<!--        <dependency>-->
+<!--            <groupId>com.alibaba.cloud</groupId>-->
+<!--            <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>-->
+<!--            <version>2.1.0.RELEASE</version>-->
+<!--        </dependency>-->
+
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-commons</artifactId>
+            <version>2.2.9.RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+        </dependency>
+
+    </dependencies>
+
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+
+```
 
 
 
-### Spring Boot+Nacos	
+**application.yml**
+
+这里主要是配置application.name，这个服务的名字会被注册到nacos服务器，调用的时候就直接使用这个服务名调用。
+
+discovery.server-addr是nacos服务器的ip端口。
+
+namespace需要和nacos相对应，nacos中设置了命名空间和组别之后，这里的namespace会注册到对应的组中，如果没有对应上的话，在网页的管理中很有可能是看不到的。
+
+```yml
+server:
+  port: 9001
+spring:
+  application:
+    name: nacos-provider
+
+  cloud:
+    nacos:
+      discovery:
+        # 指定nacos server的地址
+        server-addr: localhost:8848
+        # 指定集群名称
+        # cluster-name: nj
+        # metadata:
+          # version: v3
+        #ephemeral: false
+        namespace: gatsby
+
+```
+
+
+
+**NacosApplication.java**
+
+添加@EnableDiscoveryClient注释
+
+```java
+package com.gatsby.nacos;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+
+@SpringBootApplication
+@EnableDiscoveryClient   // Nacos服务发现
+public class NacosApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(NacosApplication.class, args);
+    }
+
+}
+```
+
+
+
+**MainController.java**
+
+添加两个方法，一个是GET，一个是POST
+
+```java
+package com.gatsby.nacos.controller;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.*;
+
+/**
+ * @author -- gatsby
+ * @date -- 2022/6/13
+ * @description --
+ */
+@Slf4j
+@RestController
+@RequestMapping("/provider")
+public class MainController {
+    @Value("${server.port}")
+    private String serverPort;
+
+    @GetMapping(value = "/sayHello")
+    public String sayHello() {
+        log.info("Hello from provider");
+        return "Hello from provider";
+    }
+
+    @PostMapping(value = "/get-id")
+    public String getId(@RequestParam Integer id) {
+        log.info(String.valueOf(id));
+        return "<h2>访问成功！</h2>服务名：nacos-provider<br/> 端口号：" + serverPort + "<br/> 传入的参数：" + id;
+    }
+}
+```
+
+
+
+Provider项目启动之后，在Nacos注册中心可以看到这个服务已经上线。
+
+并且发送请求可以收到正常的响应。
+
+
+
+### Nacos Consumer
+
+**pom.xml**
+
+消费者的pom中除了要配置相对应的spring boot和spring cloud依赖，还需要配置Feign的相关依赖。
+
+主要的问题在于版本号，以及各个框架之间的依赖，是否存在版本之间的不支持。
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.3.3.RELEASE</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>com.gatsby</groupId>
+    <artifactId>consumer</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>consumer</name>
+    <description>Demo project for Spring Boot</description>
+    <properties>
+        <java.version>1.8</java.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+            <version>2.1.0.RELEASE</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+<!--        <dependency>-->
+<!--            <groupId>org.springframework.cloud</groupId>-->
+<!--            <artifactId>spring-cloud-openfeign-core</artifactId>-->
+<!--            <version>3.1.1</version>-->
+<!--        </dependency>-->
+
+        <!-- https://mvnrepository.com/artifact/org.springframework.cloud/spring-cloud-starter-openfeign -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+            <version>2.2.10.RELEASE</version>
+        </dependency>
+
+<!--        <dependency>-->
+<!--            <groupId>org.springframework.cloud</groupId>-->
+<!--            <artifactId>spring-cloud-context</artifactId>-->
+<!--        </dependency>-->
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+```
+
+
+
+**application.yml**
+
+还是需要将Nacos注册中心和命名空间和provider保持一致。
+
+```yml
+server:
+  port: 9002  #端口号
+spring:
+  application:
+    name: nacos-consumer
+  cloud:
+    nacos:
+      discovery:
+        # 指定nacos server的地址
+        server-addr: localhost:8848
+          # 指定集群名称
+        # cluster-name: nj
+        # metadata:
+        # version: v3
+        #ephemeral: false
+        namespace: gatsby
+```
+
+
+
+**ConsumerClient.java**
+
+这是使用OpenFeign的关键，其实就是一个interface，使用注解@FeignClient+nacos中的服务命，就可以直接使用在nacos中注册过的服务。注意feign只能自动配置ip和端口，路径要从controller开始写，controller的mapping是"/provider"，方法的mapping是"/sayHello"，如果把某个路径遗漏，会直接报错404。
+
+```java
+@FeignClient("nacos-provider")      // nacos服务 id
+public interface ConsumerClient {
+    @GetMapping("/provider/sayHello")
+    String sayHello();
+
+    @PostMapping("/provider/get-id")
+    String getId(@RequestParam Integer id);
+}
+```
+
+
+
+**ConsumerController.java**
+
+将已经编写好的feignclient注入到controller中，直接当作一个本地变量调用即可。
+
+```java
+package com.gatsby.consumer.controller;
+
+import com.gatsby.consumer.service.ConsumerClient;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
+
+import javax.annotation.Resource;
+
+/**
+ * @author -- gatsby
+ * @date -- 2022/6/13
+ * @description --
+ */
+
+
+@Slf4j
+@RestController
+@RequestMapping("/feign")
+public class ConsumerController {
+    @Resource
+    private final ConsumerClient consumerClient;      // 加载 openfeign client
+
+    public ConsumerController(ConsumerClient consumerClient) {
+        this.consumerClient = consumerClient;
+    }
+
+    @GetMapping("/hello")
+    public String hello() {
+        log.info("Consumer Feign Hello");
+        // 调用Feign方法，类RPC
+        return consumerClient.sayHello();
+    }
+
+    @GetMapping("/get-id/{id}")
+    public String getId(@PathVariable("id") Integer id) {
+        return "FeignClient gets message from: " + consumerClient.getId(id);
+    }
+
+}
+```
+
+
+
+**RestConsumerController.java**
+
+除了使用feign之外，也可以直接使用RestTemplate，原理基本一致，但是也不用写明ip和端口，而是直接使用nacos中的服务名，但是如果使用feign的话，spring会使用loadbalance和ribbon座一层负载均衡。
+
+```java
+package com.gatsby.consumer.controller;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
+
+
+/**
+ * @author -- gatsby
+ * @date -- 2022/6/13
+ * @description --
+ */
+
+@Slf4j
+@RestController
+@RequestMapping("/consumer")
+public class RestConsumerController {
+    // 注入RestTemplate
+    private final RestTemplate restTemplate;
+
+    @Value("${server.port}")
+    private String port;
+
+    @Autowired
+    public RestConsumerController(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
+
+    @GetMapping(value = "/sayHello")
+    public String sayHello() {
+        log.info("Hello from consumer");
+        // RestTemplate调用的时候直接使用服务名+方法名，这样就屏蔽掉了
+        return "Hello from consumer, and provider says: " +
+                restTemplate.getForObject("http://nacos-provider/provider/sayHello", String.class);
+    }
+
+    // 在消费者这里采用的是get方法，但是去请求提供生产者是使用的post方法
+    @GetMapping(value = "/get-id/{id}")
+    public String getId(@PathVariable("id") Integer id) {
+        log.info(String.valueOf(id));
+        // RestTemplate的传参需要MultiValueMap数据结构
+        MultiValueMap<String, Integer> param = new LinkedMultiValueMap<>();
+        param.add("id", id);
+        return "<h2>访问成功！</h2>服务名：nacos-consumer<br/> 端口号：" +
+                port + "<br/> 传入的参数：" + id +
+                restTemplate.postForObject("http://nacos-provider/provider/get-id", param, String.class);
+    }
+}
+```
 
 
 
 
 
+**ConsumerApplication.java**
 
+```java
+package com.gatsby.consumer;
 
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.context.annotation.Bean;
+import org.springframework.web.client.RestTemplate;
 
+@SpringBootApplication
+@EnableDiscoveryClient
+@EnableFeignClients // 启用 OpenFeign
+public class ConsumerApplication {
 
+    public static void main(String[] args) {
+        SpringApplication.run(ConsumerApplication.class, args);
+    }
 
-
-
+    @LoadBalanced
+    @Bean
+    public RestTemplate restTemplate() {
+        return new RestTemplate();
+    }
+}
+```
 
 
 
