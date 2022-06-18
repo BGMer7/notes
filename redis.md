@@ -1,5 +1,7 @@
 # Redis
 
+[Redis](https://www.iamshuaidi.com/redis-interview)
+
 ### Redis定义
 
 Redis（全称：Remote Dictionary Server 远程字典服务）是一个开源的使用 ANSI C 语言编写、支持网络、可基于内存亦可持久化的日志型、Key-Value 数据库，并提供多种语言的 API。
@@ -437,7 +439,211 @@ Redis中同时使用了惰性过期和定期过期两种过期策略。
 
 
 
-### TBD　Redis线程模型
+### Redis线程模型
+
+这个问题下讨论Redis的单线程、多线程网络模型，以及多线程异步任务模型。
+
+#### 单线程模型（网络线程模型）
+
+在6.0以前的版本都是Redis的核心网络模型选择用单线程来实现。
+
+正如redis官网上说，对于一个 DB 来说，CPU 通常不会是瓶颈，因为大多数请求不会是 CPU 密集型的，而是 I/O 密集型。**具体到 Redis 的话，如果不考虑 RDB/AOF 等持久化方案，Redis 是完全的纯内存操作，执行速度是非常快的，因此这部分操作通常不会是性能瓶颈，Redis 真正的性能瓶颈在于网络 I/O，也就是客户端和服务端之间的网络传输延迟**，因此 Redis 6.0版本前选择了**单线程的 I/O 多路复用**来实现它的核心网络模型。
+
+##### 使用单线程网络模型的优势
+
+- **避免过多的上下文切换开销**
+  多线程调度过程中必然需要在 CPU 之间切换线程上下文 context，而上下文的切换是有开销的。单线程则可以规避进程内频繁的线程切换开销，因为程序始终运行在进程中单个线程内，没有多线程切换的场景。
+- **避免同步机制的开销**
+  如果 Redis 选择多线程模型，势必涉及到底层数据同步的问题，必然会引入某些同步机制，比如锁，而我们知道 Redis 不仅仅提供了简单的 key-value 数据结构，还有 list、set 和 hash 等等其他丰富的数据结构，而不同的数据结构对同步访问的加锁粒度又不尽相同，可能会导致在操作数据过程中带来很多加锁解锁的开销，增加程序复杂度的同时还会降低性能。
+- **简单可维护**
+  Redis 的作者 Salvatore Sanfilippo (别称 antirez) 对 Redis 的设计和代码有着近乎偏执的简洁性理念。因此代码的简单可维护性必然是 Redis 早期的核心准则之一，而引入多线程必然会导致代码的复杂度上升和可维护性下降。前面我们提到引入多线程必须的同步机制，如果 Redis 使用多线程模式，那么所有的底层数据结构都必须实现成线程安全的，这无疑又使得 Redis 的实现变得更加复杂。总而言之，Redis 选择单线程可以说是多方博弈之后的一种权衡：在保证足够的性能表现之下，使用单线程保持代码的简单和可维护性。
+
+在 v6.0 版本之前，Redis 的核心网络模型一直是一个典型的单 Reactor 模型：**利用 epoll/select/kqueue 等多路复用技术，在单线程的事件循环中不断去处理事件（客户端请求），最后回写响应数据到客户端**	
+
+[Redis线程模型 - 知乎 (zhihu.com)](https://zhuanlan.zhihu.com/p/462925793)
+
+下面我们描绘一下 客户端client 与 Redis server 建立连接、发起请求到接收到返回的整个过程：
+
+- 首先Redis 服务器启动，开启主线程事件循环 aeMain，注册 acceptTcpHandler 连接应答处理器到用户配置的监听端口对应的文件描述符，等待新连接到来；
+- 客户端和服务端建立网络连接，acceptTcpHandler 被调用，主线程将 readQueryFromClient 命令读取处理器绑定到新连接对应的文件描述符上作为对应事件发生时的回调函数，并初始化一个 client 绑定这个客户端连接；
+- 客户端发送请求命令，触发读就绪事件，主线程调用 readQueryFromClient 通过 socket 读取客户端发送过来的命令存入 client->querybuf 读入缓冲区；
+- 接着调用 processInputBuffer，在其中使用 processInlineBuffer 或者 processMultibulkBuffer 根据 Redis 协议解析命令，最后调用 processCommand 执行命令；
+- 根据请求命令的类型（SET, GET, DEL, EXEC 等），分配相应的命令执行器去执行，最后调用 addReply 函数族的一系列函数将响应数据写入到对应 client 的写出缓冲区：client->buf 或者 client->reply ，client->buf 是首选的写出缓冲区，固定大小 16KB，一般来说可以缓冲足够多的响应数据，但是如果客户端在时间窗口内需要响应的数据非常大，那么则会自动切换到 client->reply链表上去，使用链表理论上能够保存无限大的数据（受限于机器的物理内存），最后把 client 添加进一个 LIFO 队列 clients_pending_write；
+- 在事件循环 aeMain 中，主线程执行 beforeSleep --> handleClientsWithPendingWrites，遍历 clients_pending_write 队列，调用 writeToClient 把 client 的写出缓冲区里的数据回写到客户端，如果写出缓冲区还有数据遗留，则注册 sendReplyToClient 命令回复处理器到该连接的写就绪事件，等待客户端可写时在事件循环中再继续回写残余的响应数据。
+
+
+
+#### Redis6.0之后的多线程模型
+
+<img src="https://pic4.zhimg.com/v2-c286c18ded02b276adbe6e2431d46ddf_r.jpg" alt="preview" style="zoom:50%;" />
+
+这种模式不再是单线程的事件循环，而是有多个线程（IO Thread）各自维护一个独立的事件循环。整体模型是由 Main 线程负责接收新连接，并分发给 IO Thread 去独立处理（解析请求命令），但是具体命令的执行还是使用main 线程来执行，最后使用IO 线程回写响应给客户端。
+
+IO线程轮训socket列表读事件，然后解析为redis命令，并把解析好的命令放到全局待执行队列，然后主线程从全局待执行队列读取命令然后具体执行命令，最后把响应结果分配到不同IO线程，由IO线程来具体执行把响应结果写回客户端。
+
+**也就是具体命令执行还是由main线程所在的事件循环单线程处理，只是读写socket事件由IO线程来处理。**
+
+虽然多线程方案能提升1倍以上的性能，但整个方案仍然比较粗糙：
+
+- 首先所有命令的执行仍然在主线程中进行，仍然存在性能瓶颈。
+- 另外IO 读写为批处理读写，即所有 IO 线程先读取完请求数据并且解析为redis命令后，主线程才开始执行解析的命令；然后待主线程执行完所有的redis命令后，才让所有 IO 线程再一起回复所有响应；也就是说不同请求需要相互等待，效率不高。
+- 最后在 IO 批处理读写和主线程处理时，使用线程自旋检测等待（如下代码），效率更是低下，即便任务很少，也很容易把 CPU 打满。
+
+
+
+#### Redis任务多线程模型（异步任务，非网络线程模型）
+
+Redis 在 v4.0 版本的时就已经引入了的多线程来做一些异步操作，这主要是为了解决一些非常耗时的命令，通过将这些命令的执行进行异步化，避免阻塞单线程网络模型的事件循环。
+
+Redis 启动时，会创建三个任务队列，并对应构建 3 个 BIO 线程，三个 BIO 线程与 3 个任务队列之间一一对应。BIO 线程分别处理如下 3 种任务。
+
+1. close 关闭文件任务。rewriteaof 完成后，主线程需要关闭旧的 AOF 文件，就向 close 队列插入一个旧 AOF 文件的关闭任务。由 close 线程来处理。
+2. fysnc 任务。Redis 将 AOF 数据缓冲写入文件内核缓冲后，需要定期将系统内核缓冲数据写入磁盘，此时可以向 fsync 队列写入一个同步文件缓冲的任务，由 fsync 线程来处理。
+3. lazyfree 任务。Redis 在需要淘汰元素数大于 64 的聚合类数据类型时，如列表、集合、哈希等，就往延迟清理队列中写入待回收的对象，由 lazyfree 线程后续进行异步回收。
+
+BIO 线程的整个处理流程如图所示。当主线程有慢任务需要异步处理时。就会向对应的任务队列提交任务。提交任务时，首先申请内存空间，构建 BIO 任务。然后对队列锁进行加锁，在队列尾部追加新的 BIO 任务，最后尝试唤醒正在等待任务的 BIO 线程。
+
+BIO 线程启动时或持续处理完所有任务，发现任务队列为空后，就会阻塞，并等待新任务的到来。当主线程有新任务后，主线程会提交任务，并唤醒 BIO 线程。BIO 线程随后开始轮询获取新任务，并进行处理。当处理完所有 BIO 任务后，则再次进入阻塞，等待下一轮唤醒。
+
+**总结**
+
+在Redis6.0版本前，其提供单线程网络模型，使用单线程来处理socket的读写事件、命令解析、命令执行工作。
+
+在Redis6.0版本后，提供了多线程模型逻辑，其中socket的读写事件、命令解析使用IO线程来处理，但是具体命令的执行还是使用单线程事件循环来进行处理。但是其实现并不优雅。
+
+最后无论是单线程还是多线程网络模型，命令的具体执行还是靠单线程事件循环来执行的，如果要执行的命令非常耗时，则会阻塞事件循环的执行，使得其他命令得不到及时执行，所以Redis4.0时开始提供异步多线程任务来解决耗时比较长的命令的执行，将其异步化执行，使得主事件循环线程可以及时得到释放。
+
+
+
+
+
+### Redis分区
+
+Redis 分区技术（又称 Redis Partition）指的是将 Redis 中的数据进行拆分，然后把拆分后的数据分散到多个不同的 Redis 实例（即服务器）中，每个实例仅存储数据集的某一部分（一个子集），我们把这个过程称之为 Redis 分区操作。
+
+> Redis 实例指的是一台安装了 Redis 服务器的计算机。
+
+分区（Partition）不仅是 Redis 中的概念，几乎所有数据库管理系统都会涉及到“分区”的应用。
+
+**Redis 分区技术有两个方面的优势，一是提升服务器的性能，二是提高了服务器的数据存储能力。**
+
+一方面，单台机器的 Redis 服务器，其网络 IO 能力和计算资源都是非常有限的，但是如果我们将请求分散到多台机器上，那么就能充分利用多台计算机的算力和网络带宽，从而整体上提升 Redis 服务器的性能。另一方面，随着存储数据的不断增加，单台机器的存储容量会达到极限，若将数据分散存储到多台 Redis 服务器上，其存储能力也将得到大幅度提升。
+
+> 注意，Redis 分区技术可以利用多台计算机的内存总和，从而创建出大型的 Redis 数据库。
+
+#### 范围分区
+
+范围分区是最简单、最有效的分区方法之一。所谓范围分区指的是将特定范围的 key 映射到指定的 Redis 实例上。key 的命名格式如下：
+
+```
+object_name:<id>
+```
+
+比如：user:1、user:2 ...用来表示不同 id 的用户。下面通过一个示例了解范围分区的具体流程：
+
+假设现在共有 3000 个用户，您可以把 id 从 0 到 1000 的用户映射到实例 R0 上，id 从 1001 到 2000 的用户映射到实例 R1 上，以此类推，将 id 从 2001 到 3000 的用户映射到实例 R2 上。
+
+范围分区不仅简单，而且实用，适合许多的特定场景。但当存储的 key 不能按照范围划分时，那么范围分区就不再适用了，比如 key 是一组 uuid（通用唯一识别码）。如下所示：
+
+```
+9eb4d81b-31ec-4c69-a721-c7e1771413dd
+```
+
+此时范围分区就不再适用，就要用到另外一种分区方式——哈希分区。
+
+#### 哈希分区
+
+哈希分区与范围分区相比，它最显著的优势是适合任何形式的 key。哈希分区方法并不复杂比，id 表达式如下所示：
+
+```
+id=hash(key)%N
+```
+
+这里的 id 指的是 Redis 实例的编号，而 N 表示共有多少个 Redis 实例。
+
+首先调用一个 crc32() 哈希函数，它可以将 key 转换为一个整数。 如下所示：
+
+crc32(key)
+
+假如转换后的整数是 93024922，此时共有 4 个 Redis 实例，对整数与实例的数量进行取模运算，就会得到一个 0 到 3 之间的整数，如下所示：
+
+```
+93024922 % 4 = 2
+```
+
+上述计算结果为 2 ，我们就把这个 key 映射到 R2 实例中，如果为 3 就映射到 R3实例中。以此类推，通过这种方式可以将所有的 key 分散到 4 个不同的 Redis 实例中。
+
+
+
+#### Redis分区的缺陷
+
+- 同时操作多个key,则不能使用Redis事务
+- 当使用分区的时候，数据处理会非常复杂，例如为了备份你必须从不同的Redis实例和主机同时收集RDB / AOF文件
+- 分区使用的粒度是key，不能使用一个非常长的排序key存储一个数据集
+- 涉及多个key的操作通常不会被支持。例如你不能对两个集合求交集，因为他们可能被存储到不同的Redis实例（实际上这种情况也有办法，但是不能直接使用交集指令）。
+- 分区时动态扩容或缩容可能非常复杂。Redis集群在运行时增加或者删除Redis节点，能做到最大程度对用户透明地数据再平衡，但其他一些客户端分区或者代理分区方法则不支持这种特性。然而，有一种预分片的技术也可以较好的解决这个问题
+
+
+
+### Redis缓存预热
+
+缓存预热是指系统上线后，提前将相关的缓存数据加载到缓存系统。避免在用户请求的时候，先查询数据库，然后再将数据缓存的问题，用户直接查询事先被预热的缓存数据。
+
+如果不进行预热，那么Redis初始状态数据为空，系统上线初期，对于高并发的流量，都会访问到数据库中， 对数据库造成流量的压力。
+
+缓存预热解决方案：
+
+- 数据量不大的时候，工程启动的时候进行加载缓存动作；
+- 数据量大的时候，设置一个定时任务脚本，进行缓存的刷新；
+- 数据量太大的时候，优先保证热点数据进行提前加载到缓存。
+
+
+
+
+
+### Redis单副本
+
+Redis单副本，采用单个Redis节点部署架构，没有备用节点实时同步数据，不提供数据持久化和备份策略，适用于数据可靠性要求不高的纯缓存业务场景。
+
+**优点：**
+
+- 架构简单，部署方便；
+- 高性价比：缓存使用时无需备用节点（单实例可用性可以用supervisor或crontab保证），当然为了满足业务的高可用性，也可以牺牲一个备用节点，但同时刻只有一个实例对外提供服务；
+- 高性能。
+
+**缺点：**
+
+- 不保证数据的可靠性；
+- 在缓存使用，进程重启后，数据丢失，即使有备用的节点解决高可用性，但是仍然不能解决缓存预热问题，因此不适用于数据可靠性要求高的业务；
+- 高性能受限于单核CPU的处理能力（Redis是单线程机制），CPU为主要瓶颈，所以适合操作命令简单，排序、计算较少的场景。也可以考虑用Memcached替代。
+
+
+
+### Redis多副本
+
+Redis多副本，采用主从（replication）部署结构，相较于单副本而言最大的特点就是主从实例间数据实时同步，并且提供数据持久化和备份策略。主从实例部署在不同的物理服务器上，根据公司的基础环境配置，可以实现同时对外提供服务和读写分离策略。
+
+**优点：**
+
+- 高可靠性：一方面，采用双机主备架构，能够在主库出现故障时自动进行主备切换，从库提升为主库提供服务，保证服务平稳运行；另一方面，开启数据持久化功能和配置合理的备份策略，能有效的解决数据误操作和数据异常丢失的问题；
+- 读写分离策略：从节点可以扩展主库节点的读能力，有效应对大并发量的读操作。
+
+**缺点：**
+
+- 故障恢复复杂，如果没有RedisHA系统（需要开发），当主库节点出现故障时，需要手动将一个从节点晋升为主节点，同时需要通知业务方变更配置，并且需要让其它从库节点去复制新主库节点，整个过程需要人为干预，比较繁琐；
+- 主库的写能力受到单机的限制，可以考虑分片；
+- 主库的存储能力受到单机的限制，可以考虑Pika；
+- 原生复制的弊端在早期的版本中也会比较突出，如：Redis复制中断后，Slave会发起psync，此时如果同步不成功，则会进行全量同步，主库执行全量备份的同时可能会造成毫秒或秒级的卡顿；又由于COW机制，导致极端情况下的主库内存溢出，程序异常退出或宕机；主库节点生成备份文件导致服务器磁盘IO和CPU（压缩）资源消耗；发送数GB大小的备份文件导致服务器出口带宽暴增，阻塞请求，建议升级到最新版本。
+
+
+
+### TBD Redis哨兵Sentinel
+
+
+
+
+
+### TBD Redis Cluster
 
 
 
@@ -446,5 +652,748 @@ Redis中同时使用了惰性过期和定期过期两种过期策略。
 
 
 
+
+### TBD Redis主从复制
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Spring Boot/Cloud + Redis
 
 [SpringBoot整合Mysql、Redis_路上的追梦人的博客-CSDN博客_springboot配置mysql和redis](https://blog.csdn.net/Jiangtagong/article/details/122960915)
+
+Redis的实际配置基于Mybatis-starter项目的MySQL服务。https://github.com/BGMer7/ORM-starter/tree/master/MyBatisPlus-starter
+
+
+
+**application.properties**
+
+```properties
+# Redis配置项，以spring.redis为前缀
+# 数据库索引（默认为0）
+spring.redis.database=0
+# 服务器地址
+spring.redis.host=127.0.0.1
+# 端口
+spring.redis.port=6379
+# 密码（默认为空，为空时不设置该属性）
+spring.redis.password=
+# 超时时间（毫秒）
+spring.redis.timeout=30000
+# 建议使用lettuce 可以换成jedis，spring默认集成lettuce
+spring.redis.client-type=lettuce
+# 如果使用jedis客户端，则下面定义的内容需要将lettuce换成jedis
+# 连接池最大连接数（使用负值表示没有限制）
+spring.redis.lettuce.pool.max-active=10
+# 最大阻塞等待时间（使用负值表示没有限制）
+spring.redis.lettuce.pool.max-wait=-2
+# 最大空闲连接数
+spring.redis.lettuce.pool.max-idle=10
+# 最小空闲连接
+spring.redis.lettuce.pool.min-idle=0
+# mysql 配置
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.url=jdbc:mysql://127.0.0.1:3306/java_mysql?serverTimezone=Asia/Shanghai
+spring.datasource.username=root
+spring.datasource.password=123456
+mybatis.mapper-locations=classpath:mapper/*.xml
+# 端口参数
+server.port=7010
+
+```
+
+
+
+**pom.xml**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.7.0</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>com.gatsby</groupId>
+    <artifactId>Redis-starter</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>Redis-starter</name>
+    <description>Demo project for Spring Boot</description>
+    <properties>
+        <java.version>1.8</java.version>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mybatis.spring.boot</groupId>
+            <artifactId>mybatis-spring-boot-starter</artifactId>
+            <version>2.2.2</version>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.19</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+
+```
+
+
+
+**RedisConfig.java**
+
+spring中为redis定义了专门的RedisAutoConfiguration自动配置类
+ * 这个类在 package org.springframework.boot.autoconfigure.data.redis 中
+ * 其中定义创建泛型为<Object, Object>的RedisTemplate对象。
+ * 为了允许自定义配置Bean，自动配置类使用@ConditionalOnMissingBean注解，
+ * 表示当其他地方定义一个RedisTemplate的Bean时，会替代自动配置中的结果
+
+```java
+package com.gatsby.redisstarter.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
+
+import java.io.Serializable;
+
+/**
+ * @author -- gatsby
+ * @date -- 2022/6/15
+ * @description --
+ * spring中为redis定义了专门的RedisAutoConfiguration自动配置类
+ * 这个类在 package org.springframework.boot.autoconfigure.data.redis 中
+ * 其中定义创建泛型为<Object, Object>的RedisTemplate对象。
+ * 为了允许自定义配置Bean，自动配置类使用@ConditionalOnMissingBean注解，
+ * 表示当其他地方定义一个RedisTemplate的Bean时，会替代自动配置中的结果。
+ */
+
+
+// 自定义RedisConfig
+@Configuration
+public class RedisConfig {
+
+    @Bean
+    public RedisTemplate<String, Serializable> redisTemplate(LettuceConnectionFactory lettuceConnectionFactory) {
+        RedisTemplate<String, Serializable> redisTemplate = new RedisTemplate<>();
+        // StringRedisSerializer：序列化为String
+        redisTemplate.setKeySerializer(new StringRedisSerializer());
+        // GenericJackson2JsonRedisSerializer：
+        // 序列化为JSON,同时在json中加入@class属性，类的全路径包名，方便反系列化
+        redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+        redisTemplate.setHashKeySerializer(new StringRedisSerializer());
+        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+        //设置连接工厂
+        redisTemplate.setConnectionFactory(lettuceConnectionFactory);
+        return redisTemplate;
+    }
+}
+
+```
+
+
+
+**RedisUtil.java**
+
+```java
+package com.gatsby.redisstarter.util;
+
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
+
+import javax.annotation.Resource;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
+/**
+ * @author -- gatsby
+ * @date -- 2022/6/15
+ * @description --
+ */
+
+
+@Component
+public class RedisUtil {
+    @Resource
+    private RedisTemplate<String, Object> redisTemplate;
+
+    public void setRedisTemplate(RedisTemplate<String, Object> redisTemplate) {
+        this.redisTemplate = redisTemplate;
+    }
+
+    // 指定缓存失效时间
+    public boolean expire(String key, long time) {
+        try {
+            if (time > 0) {
+                redisTemplate.expire(key, time, TimeUnit.SECONDS);
+            }
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // 根据key获取过期时间
+    public long getExpire(String key) {
+        return redisTemplate.getExpire(key, TimeUnit.SECONDS);
+    }
+
+    // 判断key是否存在
+    public boolean hasKey(String key) {
+        try {
+            return redisTemplate.hasKey(key);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // 删除缓存
+    public void del(String... key) {
+        if (key != null && key.length > 0) {
+            if (key.length == 1) {
+                redisTemplate.delete(key[0]);
+            } else {
+                redisTemplate.delete(
+                        (Collection<String>) CollectionUtils.arrayToList(key));
+            }
+        }
+    }
+
+    // 普通缓存获取
+    public Object get(String key) {
+        return key == null ? null : redisTemplate.opsForValue().get(key);
+    }
+
+    // 普通缓存放入
+    public boolean set(String key, Object value) {
+        try {
+            redisTemplate.opsForValue().set(key, value);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+
+    }
+
+    // 普通缓存放入并设置时间
+    public boolean set(String key, Object value, long time) {
+        try {
+            if (time > 0) {
+                redisTemplate.opsForValue()
+                        .set(key, value, time, TimeUnit.SECONDS);
+            } else {
+                set(key, value);
+            }
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+
+    // 递增
+    public long incr(String key, long delta) {
+        if (delta < 0) {
+            throw new RuntimeException("递增因子必须大于0");
+        }
+        return redisTemplate.opsForValue().increment(key, delta);
+    }
+
+
+    // 递减
+    public long decr(String key, long delta) {
+        if (delta < 0) {
+            throw new RuntimeException("递减因子必须大于0");
+        }
+        return redisTemplate.opsForValue().increment(key, -delta);
+    }
+
+
+    // HashGet
+    public Object hget(String key, String item) {
+        return redisTemplate.opsForHash().get(key, item);
+    }
+
+    // 获取hashKey对应的所有键值
+    public Map<Object, Object> hmget(String key) {
+        return redisTemplate.opsForHash().entries(key);
+    }
+
+
+    // HashSet
+    public boolean hmset(String key, Map<String, Object> map) {
+        try {
+            redisTemplate.opsForHash().putAll(key, map);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // HashSet 并设置时间
+    public boolean hmset(String key, Map<String, Object> map, long time) {
+        try {
+            redisTemplate.opsForHash().putAll(key, map);
+            if (time > 0) {
+                expire(key, time);
+            }
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+
+    // 向一张hash表中放入数据,如果不存在将创建
+    public boolean hset(String key, String item, Object value) {
+        try {
+            redisTemplate.opsForHash().put(key, item, value);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+
+    // 向一张hash表中放入数据,如果不存在将创建
+    public boolean hset(String key, String item, Object value, long time) {
+        try {
+            redisTemplate.opsForHash().put(key, item, value);
+            if (time > 0) {
+                expire(key, time);
+            }
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // 删除hash表中的值
+    public void hdel(String key, Object... item) {
+        redisTemplate.opsForHash().delete(key, item);
+    }
+
+    // 判断hash表中是否有该项的值
+    public boolean hHasKey(String key, String item) {
+        return redisTemplate.opsForHash().hasKey(key, item);
+    }
+
+    // hash递增 如果不存在,就会创建一个 并把新增后的值返回
+    public double hincr(String key, String item, double by) {
+        return redisTemplate.opsForHash().increment(key, item, by);
+    }
+
+    // hash递减
+    public double hdecr(String key, String item, double by) {
+        return redisTemplate.opsForHash().increment(key, item, -by);
+    }
+
+
+    // 根据key获取Set中的所有值
+    public Set<Object> sGet(String key) {
+        try {
+            return redisTemplate.opsForSet().members(key);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    // 根据value从一个set中查询,是否存在
+    public boolean sHasKey(String key, Object value) {
+        try {
+            return redisTemplate.opsForSet().isMember(key, value);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // 将数据放入set缓存
+    public long sSet(String key, Object... values) {
+        try {
+            return redisTemplate.opsForSet().add(key, values);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    // 将set数据放入缓存
+    public long sSetAndTime(String key, long time, Object... values) {
+        try {
+            Long count = redisTemplate.opsForSet().add(key, values);
+            if (time > 0) expire(key, time);
+            return count;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+
+    // 获取set缓存的长度
+    public long sGetSetSize(String key) {
+        try {
+            return redisTemplate.opsForSet().size(key);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    // 移除值为value的
+    public long setRemove(String key, Object... values) {
+        try {
+            Long count = redisTemplate.opsForSet().remove(key, values);
+            return count;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+
+    // 获取list缓存的内容
+    public List<Object> lGet(String key, long start, long end) {
+        try {
+            return redisTemplate.opsForList().range(key, start, end);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    // 获取list缓存的长度
+    public long lGetListSize(String key) {
+        try {
+            return redisTemplate.opsForList().size(key);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    // 通过索引 获取list中的值
+    public Object lGetIndex(String key, long index) {
+        try {
+            return redisTemplate.opsForList().index(key, index);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    // 将list放入缓存
+    public boolean lSet(String key, Object value) {
+        try {
+            redisTemplate.opsForList().rightPush(key, value);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+
+    // 将list放入缓存
+    public boolean lSet(String key, Object value, long time) {
+        try {
+            redisTemplate.opsForList().rightPush(key, value);
+            if (time > 0) expire(key, time);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+
+    // 将list放入缓存
+    public boolean lSet(String key, List<Object> value) {
+        try {
+            redisTemplate.opsForList().rightPushAll(key, value);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+
+    // 将list放入缓存
+    public boolean lSet(String key, List<Object> value, long time) {
+        try {
+            redisTemplate.opsForList().rightPushAll(key, value);
+            if (time > 0) expire(key, time);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+
+    // 根据索引修改list中的某条数据
+    public boolean lUpdateIndex(String key, long index, Object value) {
+        try {
+            redisTemplate.opsForList().set(key, index, value);
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+
+    // 移除N个值为value
+    public long lRemove(String key, long count, Object value) {
+        try {
+            Long remove = redisTemplate.opsForList().remove(key, count, value);
+            return remove;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
+    }
+}
+```
+
+
+
+**RedisService.java**
+
+```java
+package com.gatsby.redisstarter.service;
+
+import com.gatsby.redisstarter.entity.Employee;
+
+import java.util.List;
+
+/**
+ * @author -- gatsby
+ * @date -- 2022/6/15
+ * @description --
+ */
+
+
+public interface EmployeeRedisService {
+    List<Employee> getAllEmployees();
+
+    void updateEmployeeSalary();
+
+    void deleteAllUserKey();
+
+    boolean hasKey(String key);
+}
+```
+
+
+
+**RedisServiceImpls.java**
+
+```java
+package com.gatsby.redisstarter.service.impl;
+
+import com.gatsby.redisstarter.constant.RedisConstant;
+import com.gatsby.redisstarter.entity.Employee;
+import com.gatsby.redisstarter.mapper.EmployeeMapper;
+import com.gatsby.redisstarter.service.EmployeeRedisService;
+import com.gatsby.redisstarter.service.EmployeeService;
+import com.gatsby.redisstarter.util.RedisUtil;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
+
+import javax.annotation.Resource;
+import java.util.List;
+
+/**
+ * @author -- gatsby
+ * @date -- 2022/6/15
+ * @description --
+ */
+
+@Slf4j
+@Service
+public class EmployeeRedisServiceImpl implements EmployeeRedisService {
+    @Resource
+    private RedisUtil redisUtil;
+
+    @Resource
+    private EmployeeMapper employeeMapper;
+
+    @Override
+    public List<Employee> getAllEmployees() {
+        log.info("get all employee");
+        List<Employee> employeeList = (List<Employee>) redisUtil.get(RedisConstant.ALL_USER_KEY);
+        if (CollectionUtils.isEmpty(employeeList)) {
+            employeeList = employeeMapper.queryAll();
+            redisUtil.set(RedisConstant.ALL_USER_KEY, employeeList, 30);
+        }
+        return employeeList;
+    }
+
+    @Override
+    public void updateEmployeeSalary() {
+        log.info("update employee salary");
+    }
+
+    @Override
+    public void deleteAllUserKey() {
+        redisUtil.del(RedisConstant.ALL_USER_KEY);
+    }
+
+    @Override
+    public boolean hasKey(String key) {
+        return redisUtil.hasKey(key);
+    }
+}
+```
+
+
+
+**RedisController.java**
+
+```java
+package com.gatsby.redisstarter.controller;
+
+import com.gatsby.redisstarter.entity.Employee;
+import com.gatsby.redisstarter.service.EmployeeRedisService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import javax.annotation.Resource;
+import java.util.List;
+
+/**
+ * @author -- gatsby
+ * @date -- 2022/6/15
+ * @description --
+ */
+
+
+@Slf4j
+@RestController
+@RequestMapping("/redis")
+public class EmployeeRedisController {
+    private EmployeeRedisService employeeRedisService;
+
+    public EmployeeRedisController(EmployeeRedisService employeeRedisService) {
+        this.employeeRedisService = employeeRedisService;
+    }
+
+    @GetMapping("/query-all")
+    public List<Employee> queryAll() {
+        return employeeRedisService.getAllEmployees();
+    }
+
+    @GetMapping("/delete-all-user-key")
+    public void deleteAllUserKey() {
+        employeeRedisService.deleteAllUserKey();
+    }
+
+    @GetMapping("/has-key")
+    public boolean deleteAllUserKey(@RequestParam String key) {
+        return employeeRedisService.hasKey(key);
+    }
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

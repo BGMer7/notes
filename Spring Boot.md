@@ -937,9 +937,7 @@ public class LoginConfig implements WebMvcConfigurer {
         registration.addPathPatterns("/**"); //所有路径都被拦截
         registration.excludePathPatterns(    //添加不拦截路径
                 "/login",                    //登录路径
-                "/**/*.html",                //html静态资源
-                "/**/*.js",                  //js静态资源
-                "/**/*.css"                  //css静态资源
+                "/static"                    //css静态资源 
         );
     }
 }
@@ -1003,17 +1001,28 @@ public String login(@RequestParam(name = "username")String username, @RequestPar
 
 ## MyBatis
 
+![image-20220430152944280](C:\Users\CaiJinyang\AppData\Roaming\Typora\typora-user-images\image-20220430152944280.png)
+
+### MyBatis工作原理
+
+MyBatis在操作数据库的时候，大体经历8个步骤：
+
+1. 读取MyBatis配置文件mybatis-config.xml。mybatis-config.xml是MyBatis的全局配置文件，配置了MyBatis的运行环境等信息，其中主要的内容是获取数据库的连接。
+2. 加载映射文件Mapper.xml。Mapper.xml是SQL映射文件，该文件配置了操作数据库的SQL语句，需要在MyBatis-config.xml中加载才能执行。mybatis-config.xml可以加载多个配置文件，每个配置文件对应数据库中的一张表。
+3. 构建会话工厂。通过MyBatis的环境等配置信息构建会话工厂SqlSessionFactory。
+4. 创建SqlSession，由会话工厂创建SqlSession对象，该对象中包含了执行SQL的所有方法。
+5. MyBatis底层定义了一个Executor接口来操作数据库，它会根据SqlSession传递的参数动态地生成需要执行的SQL语句，同时负责查询缓存的维护。
+6. 在Executor接口中，包含一个MappedStatement类型的参数，该参数是对映射参数的封装，用于存储映射的SQL语句的id、参数等等，Mapper.xml文件中一个SQL对应一个MappedStatement对象，SQL的id也就是MappedStatement的id。
+7. 输入参数映射。在执行的时候，MappedStatement会对于用户执行SQL语句的输入参数进行定义，可以定义为List、Map、基本类型、POJO类型，Executor执行器会通过MappedStatement对象在执行SQL之前，将输入的Java对象映射到SQL语句中，这里对输入参数的映射过程就类似于JDBC编程中对preparedStatement对象设置参数的过程。
+8. 输出参数映射。在数据库执行完SQL之后，MappedStatement对象会对SQL执行输出的结果进行定义，同理，可以定义为List、Map、基本类型、POJO类型，Executor执行器会通过MappedStatement对象在执行SQL语句后，将输出结果映射至Java对象中。这种将输出结果映射到Java对象的过程就类似于JDBC编程中对结果的解析处理过程。
 
 
 
+### config
 
+在实际开发中，为了避免Spring配置文件中的信息过于臃肿，通常会将配置文件中不同的部分按照不同的功能分散在多个配置文件中。
 
-
-
-
-
-
-### 
+例如可以将事务文件放在application-transaction.properties中，将数据源放在application-db.properties中，这样一来，加载xml的时候，只需要通过application*.properties的方式就可以将所有的配置文件都导入进来。
 
 
 
