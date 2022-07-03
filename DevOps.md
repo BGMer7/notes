@@ -136,6 +136,28 @@ Jenkins和GitLab CI/CD都擅长于自己的工作，并且拥有自己的技术�
 
 
 
+### Jenkins
+
+[Jenkins 自动部署 SpringBoot 项目总结](https://blog.csdn.net/qq_41698074/article/details/119052891)
+
+[Windows环境下使用Jenkins部署spring boot项目到windows(server)环境](https://blog.csdn.net/qq_40313687/article/details/121497537)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
