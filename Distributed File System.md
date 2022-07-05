@@ -75,6 +75,77 @@ chmod +x minio
 
 
 
+**注册为服务**
+
+[centos-7-安装minio](https://blog.csdn.net/privateobject/article/details/125442468)
+
+建一个minio.conf
+
+```conf
+# minio.conf文件内容
+
+# 数据存放目录
+MINIO_VOLUMES="/data"
+# 端口号设置
+MINIO_OPTS="--console-address :9010"
+# 用户名
+MINIO_ROOT_USER="minioAdmin"
+# 密码
+MINIO_ROOT_PASSWORD="minioAdmin"
+```
+
+
+
+在/etc/systemd/system中新建文件minio.service
+
+```shell
+vim /etc/systemd/system/minio.service
+```
+
+
+
+```shell
+# minio.service文件内容
+
+[Unit]
+Description=MinIO
+Documentation=https://docs.min.io
+Wants=network-online.target
+After=network-online.target
+# minio可执行文件具体位置
+AssertFileIsExecutable=/usr/local/minio/minio
+[Service]
+# User and group 用户 组
+User=root
+Group=root
+# 创建的配置文件 minio.conf
+EnvironmentFile=/usr/local/minio/conf/minio.conf
+ExecStart=/usr/local/minio/minio server $MINIO_OPTS $MINIO_VOLUMES
+# Let systemd restart this service always
+Restart=always
+# Specifies the maximum file descriptor number that can be opened by this process
+LimitNOFILE=65536
+# Disable timeout logic and wait until process is stopped
+TimeoutStopSec=infinity
+SendSIGKILL=no
+[Install]
+WantedBy=multi-user.target
+
+```
+
+查看
+
+```shell
+systemctl enable minio.service
+systemctl daemon-reload
+systemctl start minio
+systemctl status minio.service
+```
+
+
+
+
+
 #### Linux分布式集群部署
 
 [三.minio 的分布式部署、单节点多磁盘、多节点模式](https://blog.csdn.net/xixiyuguang/article/details/119456729)
