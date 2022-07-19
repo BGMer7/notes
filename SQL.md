@@ -1,5 +1,387 @@
 # SQL
 
+## Tips
+
+### NO SELECT *
+
+select语句查询要配合有需要的字段
+
+反例子：
+
+```text
+select * from employee;
+```
+
+正例子：
+
+```text
+select id，name from employee;
+```
+
+理由：
+
+- 只取需要的字段，节省资源、减少网络开销。
+- select * 进行查询时，很可能就不会使用到覆盖索引了，就会造成[回表查询](https://www.zhihu.com/search?q=回表查询&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra={"sourceType"%3A"article"%2C"sourceId"%3A"260536848"})。
+
+
+
+### 如果结果确定只有一条，加上Limit
+
+理由：
+
+- 加上limit语句之后，如果已经查找到符合条件的结果，就不会继续向下扫描，扫描效率将大大提高。
+- 当然，如果name是唯一索引的话，是不必要加上limit 1了，因为limit的存在主要就是为了防止全表扫描，从而提高性能,如果一个语句本身可以预知不用[全表扫描](https://www.zhihu.com/search?q=全表扫描&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra={"sourceType"%3A"article"%2C"sourceId"%3A"260536848"})，有没有limit ，性能的差别并不大。
+
+
+
+### 避免在where中使用or
+
+假设现在需要查询[userid](https://www.zhihu.com/search?q=userid&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra={"sourceType"%3A"article"%2C"sourceId"%3A"260536848"})为1或者年龄为18岁的用户，很容易有以下sql
+
+反例:
+
+```text
+select * from user where userid=1 or age =18
+```
+
+正例：
+
+```text
+//使用union all
+select * from user where userid=1 
+union all 
+select * from user where age = 18
+
+//或者分开两条sql写：
+select * from user where userid=1
+select * from user where age = 18
+```
+
+理由：
+
+使用or可能会使索引失效，从而全表扫描。
+
+
+
+### 优化limit的分页
+
+我们日常做分页需求时，一般会用 limit 实现，但是当偏移量特别大的时候，查询效率就变得低下。
+
+反例：
+
+```text
+select id，name，age from employee limit 10000，10
+```
+
+正例：
+
+```text
+//方案一 ：返回上次查询的最大记录(偏移量)
+select id，name from employee where id>10000 limit 10.
+
+//方案二：order by + 索引
+select id，name from employee order by id  limit 10000，10
+
+//方案三：在业务允许的情况下限制页数：
+```
+
+理由：
+
+- 因为limit并非直接定位到某个位置，而是要先把偏移量+要取得的条数然后再把前面的数据舍弃掉。
+- 如果使用优化方案一，返回上次最大查询记录（偏移量），这样可以跳过偏移量，效率提升不少。
+
+- 方案二使用order by+索引，也是可以提高查询效率的。
+- 方案三的话，建议跟业务讨论，有没有必要查这么后的分页啦。因为绝大多数用户都不会往后翻太多页。
+
+
+
+### 优化like模糊查询
+
+like的模糊查询也有可能导致索引失效。
+
+反例：
+
+```text
+select userId，name from user where userId like '%123';
+```
+
+正例：
+
+```text
+select userId，name from user where userId like '123%';
+```
+
+理由：
+
+- 把%放前面，并不走索引，
+- 把% 放关键字后面，还是会走索引的。
+
+
+
+### 优化where查询，避免多余的行返回值
+
+反例：
+
+```text
+List<Long> userIds = sqlMap.queryList("select userId from user where isVip=1");
+boolean isVip = userIds.contains(userId);
+```
+
+正例：
+
+```text
+Long userId = sqlMap.queryObject("select userId from user where userId='userId' and isVip='1' ")
+boolean isVip = userId！=null;
+```
+
+理由：
+
+- 需要什么数据，就去查什么数据，避免返回不必要的数据，节省开销。
+
+
+
+### 优化where查询，避免在where子句中进行表达式
+
+在 where 子句中对字段进行表达式操作，这将导致系统放弃使用索引而进行全表扫
+
+反例：
+
+```text
+select * from user where age-1 =10；
+```
+
+正例：
+
+```text
+select * from user where age =11；
+```
+
+理由：
+
+- 虽然age加了索引，但是因为对它进行运算，索引直接迷路了
+
+
+
+### 优化where查询，避免使用!=或者<>
+
+反例：
+
+```text
+select age,name  from user where age <>18;
+```
+
+正例：
+
+```text
+//可以考虑分开两条sql写
+select age,name  from user where age <18;
+select age,name  from user where age >18;
+```
+
+理由：
+
+- 使用!=和<>很可能会让索引失效
+
+
+
+
+
+### 避免在索引列上使用内置函数
+
+业务需求：查询最近七天内登陆过的用户（假设loginTime加了索引）
+
+反例：
+
+```text
+select userId,loginTime 
+from loginuser 
+where Date_ADD(loginTime,Interval 7 DAY) >=now();
+```
+
+正例：
+
+```text
+explain  
+select userId,loginTime 
+from loginuser 
+where  loginTime >= Date_ADD(NOW(),INTERVAL - 7 DAY);
+```
+
+理由：
+
+- 索引列loginTime上使用了Date_ADD(loginTime, Interval 7 Day)内置函数，索引失效了
+- 如果索引列不加内置函数，索引还是会走的。
+
+
+
+### 使用联合索引要符合最左原则
+
+表结构：（有一个联合索引idx_userid_age，userId在前，age在后）
+
+```text
+CREATE TABLE `user` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `userId` int(11) NOT NULL,
+  `age` int(11) DEFAULT NULL,
+  `name` varchar(255) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_userid_age` (`userId`,`age`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+```
+
+反例：
+
+```text
+select * from user where age = 10;
+```
+
+正例：
+
+```text
+//符合最左匹配原则
+select * from user where userid=10 and age =10；
+//符合最左匹配原则
+select * from user where userid =10;
+```
+
+理由：
+
+- 当我们创建一个联合索引的时候，如(k1,k2,k3)，相当于创建了（k1）、(k1,k2)和(k1,k2,k3)三个索引，这就是最左匹配原则。
+- 联合索引不满足最左原则，索引一般会失效，但是这个还跟MySQL优化器有关的。
+
+
+
+
+
+
+
+### inner join、left join、right join
+
+优先使用inner join，如果使用left join左边选用较小的表。
+
+inner join内连接，在两张表进行连接查询的时候，只保留两个表中完全匹配的结果集
+
+left join左连接，会返回左表中的所有的行，即使在右表中没有匹配的记录
+
+反例:
+
+```text
+select * 
+from tab1 t1 
+left join 
+tab2 t2  
+on t1.size = t2.size 
+where t1.id>2;
+```
+
+正例：
+
+```text
+select * 
+from (select * from tab1 where id >2) t1 
+left join 
+tab2 t2 
+on t1.size = t2.size;
+```
+
+理由：
+
+- inner join是等值连接，或许返回的行数比较少，所以性能会相对好一些。
+- 同理因为使用了左连接，应该把限制条件的处理放在左表处理，让左表的记录数量尽可能少，返回的结果可能会更少。
+
+
+
+### 在where和order by的列上进行条件优化
+
+反例：
+
+```text
+select * from user where address ='深圳' order by age ;
+```
+
+正例：
+
+```text
+添加索引
+alter table user add index idx_address_age (address,age)
+```
+
+
+
+### 大量插入时使用批插入
+
+反例：
+
+```text
+for(User u :list){
+ INSERT into user(name,age) values(#name#,#age#)   
+}
+```
+
+正例：
+
+```text
+//一次500批量插入，分批进行
+insert into user(name,age) values
+<foreach collection="list" item="item" index="index" separator=",">
+    (#{item.name},#{item.age})
+</foreach>
+```
+
+理由：
+
+- 批量插入性能好，更加省时间
+
+> 打个比喻:假如你需要搬一万块砖到楼顶,你有一个电梯,电梯一次可以放适量的砖（最多放500）,你可以选择一次运送一块砖,也可以一次运送500,你觉得哪个时间消耗大?
+
+
+
+### 适当使用覆盖索引
+
+覆盖索引能够使得你的SQL语句不需要回表，仅仅访问索引就能够得到所有需要的数据，大大提高了查询效率。
+
+反例：
+
+```text
+// like模糊查询，不走索引了
+select * from user where userid like '%123%'
+```
+
+正例：
+
+```text
+//id为主键，那么为普通索引，即覆盖索引登场了。
+select id,name from user where userid like '%123%';
+```
+
+
+
+### 适当使用Distinct
+
+distinct 关键字一般用来过滤重复记录，以返回不重复的记录。在查询一个字段或者很少字段的情况下使用时，给查询带来优化效果。但是在字段很多的时候使用，却会大大降低查询效率。
+
+反例：
+
+```text
+SELECT DISTINCT * from  user;
+```
+
+正例：
+
+```text
+select DISTINCT name from user;
+```
+
+理由：
+
+- 带distinct的语句cpu时间和占用时间都高于不带distinct的语句。因为当查询很多字段时，如果使用distinct，数据库引擎就会对数据进行比较，[过滤](https://www.zhihu.com/search?q=过滤&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra={"sourceType"%3A"article"%2C"sourceId"%3A"260536848"})掉重复数据，然而这个比较，过滤的过程会占用系统资源，cpu时间。
+
+
+
+
+
+
+
 ## Leetcode例题
 
 ### SELECT
