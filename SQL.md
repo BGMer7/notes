@@ -8,13 +8,13 @@ select语句查询要配合有需要的字段
 
 反例子：
 
-```text
+```sql
 select * from employee;
 ```
 
 正例子：
 
-```text
+```sql
 select id，name from employee;
 ```
 
@@ -40,13 +40,13 @@ select id，name from employee;
 
 反例:
 
-```text
+```sql
 select * from user where userid=1 or age =18
 ```
 
 正例：
 
-```text
+```sql
 //使用union all
 select * from user where userid=1 
 union all 
@@ -63,19 +63,46 @@ select * from user where age = 18
 
 
 
+### 避免向客户端返回大量数据
+
+假设业务需求是，用户请求查看自己最近一年观看过的直播数据。
+
+反例：
+
+```sql
+//一次性查询所有数据回来
+select * from LivingInfo where watchId =useId and watchTime >= Date_sub(now(),Interval 1 Y)
+```
+
+正例：
+
+```sql
+//分页查询
+select * from LivingInfo where watchId =useId and watchTime>= Date_sub(now(),Interval 1 Y) limit offset，pageSize
+
+//如果是前端分页，可以先查询前两百条记录，因为一般用户应该也不会往下翻太多页，
+select * from LivingInfo where watchId =useId and watchTime>= Date_sub(now(),Interval 1 Y) limit 200;
+```
+
+
+
+
+
+
+
 ### 优化limit的分页
 
 我们日常做分页需求时，一般会用 limit 实现，但是当偏移量特别大的时候，查询效率就变得低下。
 
 反例：
 
-```text
+```sql
 select id，name，age from employee limit 10000，10
 ```
 
 正例：
 
-```text
+```sql
 //方案一 ：返回上次查询的最大记录(偏移量)
 select id，name from employee where id>10000 limit 10.
 
@@ -101,13 +128,13 @@ like的模糊查询也有可能导致索引失效。
 
 反例：
 
-```text
+```sql
 select userId，name from user where userId like '%123';
 ```
 
 正例：
 
-```text
+```sql
 select userId，name from user where userId like '123%';
 ```
 
@@ -122,14 +149,14 @@ select userId，name from user where userId like '123%';
 
 反例：
 
-```text
+```sql
 List<Long> userIds = sqlMap.queryList("select userId from user where isVip=1");
 boolean isVip = userIds.contains(userId);
 ```
 
 正例：
 
-```text
+```sql
 Long userId = sqlMap.queryObject("select userId from user where userId='userId' and isVip='1' ")
 boolean isVip = userId！=null;
 ```
@@ -146,13 +173,13 @@ boolean isVip = userId！=null;
 
 反例：
 
-```text
+```sql
 select * from user where age-1 =10；
 ```
 
 正例：
 
-```text
+```sql
 select * from user where age =11；
 ```
 
@@ -166,13 +193,13 @@ select * from user where age =11；
 
 反例：
 
-```text
+```sql
 select age,name  from user where age <>18;
 ```
 
 正例：
 
-```text
+```sql
 //可以考虑分开两条sql写
 select age,name  from user where age <18;
 select age,name  from user where age >18;
@@ -192,7 +219,7 @@ select age,name  from user where age >18;
 
 反例：
 
-```text
+```sql
 select userId,loginTime 
 from loginuser 
 where Date_ADD(loginTime,Interval 7 DAY) >=now();
@@ -200,7 +227,7 @@ where Date_ADD(loginTime,Interval 7 DAY) >=now();
 
 正例：
 
-```text
+```sql
 explain  
 select userId,loginTime 
 from loginuser 
@@ -218,7 +245,7 @@ where  loginTime >= Date_ADD(NOW(),INTERVAL - 7 DAY);
 
 表结构：（有一个联合索引idx_userid_age，userId在前，age在后）
 
-```text
+```sql
 CREATE TABLE `user` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `userId` int(11) NOT NULL,
@@ -231,13 +258,13 @@ CREATE TABLE `user` (
 
 反例：
 
-```text
+```sql
 select * from user where age = 10;
 ```
 
 正例：
 
-```text
+```sql
 //符合最左匹配原则
 select * from user where userid=10 and age =10；
 //符合最左匹配原则
@@ -251,7 +278,25 @@ select * from user where userid =10;
 
 
 
+### 避免冗余索引
 
+反例：
+
+```sql
+KEY `idx_userId` (`userId`)
+  KEY `idx_userId_age` (`userId`,`age`)
+```
+
+正例:
+
+```sql
+//删除userId索引，因为组合索引（A，B）相当于创建了（A）和（A，B）索引
+  KEY `idx_userId_age` (`userId`,`age`)
+```
+
+理由：
+
+- 重复的索引需要维护，并且优化器在优化查询的时候也需要逐个地进行考虑，这会影响性能的。
 
 
 
@@ -265,7 +310,7 @@ left join左连接，会返回左表中的所有的行，即使在右表中没�
 
 反例:
 
-```text
+```sql
 select * 
 from tab1 t1 
 left join 
@@ -276,7 +321,7 @@ where t1.id>2;
 
 正例：
 
-```text
+```sql
 select * 
 from (select * from tab1 where id >2) t1 
 left join 
@@ -291,19 +336,66 @@ on t1.size = t2.size;
 
 
 
+### 表连接尽量使用别名
+
+反例：
+
+```sql
+select * from A 
+inner join B 
+on A.deptId = B.deptId;
+```
+
+正例：
+
+```sql
+select memeber.name,deptment.deptName 
+from A member 
+inner join B deptment 
+on member.deptId = deptment.deptId;
+```
+
+
+
+
+
+
+
 ### 在where和order by的列上进行条件优化
 
 反例：
 
-```text
+```sql
 select * from user where address ='深圳' order by age ;
 ```
 
 正例：
 
-```text
+```sql
 添加索引
 alter table user add index idx_address_age (address,age)
+```
+
+
+
+### 在group by之前过滤不需要的记录
+
+反例：
+
+```sql
+select job，avg(salary) 
+from employee  
+group by job 
+having job ='president' or job = 'managent'
+```
+
+正例：
+
+```sql
+select job，avg(salary) 
+from employee 
+where job ='president'or job = 'managent' 
+group by job；
 ```
 
 
@@ -312,7 +404,7 @@ alter table user add index idx_address_age (address,age)
 
 反例：
 
-```text
+```sql
 for(User u :list){
  INSERT into user(name,age) values(#name#,#age#)   
 }
@@ -320,7 +412,7 @@ for(User u :list){
 
 正例：
 
-```text
+```sql
 //一次500批量插入，分批进行
 insert into user(name,age) values
 <foreach collection="list" item="item" index="index" separator=",">
@@ -336,20 +428,245 @@ insert into user(name,age) values
 
 
 
+### 大量数据时优化删除和更新
+
+避免同时修改或删除过多数据，因为会造成cpu利用率过高，从而影响别人对数据库的访问。
+
+反例：
+
+```sql
+//一次删除10万或者100万+？
+delete from user where id <100000;
+//或者采用单一循环操作，效率低，时间漫长
+for（User user：list）{
+   delete from user；
+}
+```
+
+正例：
+
+```sql
+//分批进行删除,如每次500
+delete user where id<500
+delete product where id>=500 and id<1000；
+```
+
+理由：
+
+- 一次性删除太多数据，可能会有lock wait timeout exceed的错误，所以建议分批操作。
+
+
+
+### where子句中使用默认值
+
+反例：
+
+```sql
+select * from user where age is not null;
+```
+
+正例：
+
+```sql
+//设置0为默认值
+select * from user where age>0;
+```
+
+理由：
+
+- 并不是说使用了is null 或者 is not null 就会不走索引了，这个跟mysql版本以及查询[成本](https://www.zhihu.com/search?q=成本&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra={"sourceType"%3A"article"%2C"sourceId"%3A"260536848"})都有关。
+
+> 如果mysql优化器发现，走索引比不走索引成本还要高，肯定会放弃索引，这些条件`！=，>is null，is not null`经常被认为让索引失效，其实是因为一般情况下，查询的成本高，优化器自动放弃的。
+
+- 如果把[null值](https://www.zhihu.com/search?q=null值&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra={"sourceType"%3A"article"%2C"sourceId"%3A"260536848"})，换成默认值，很多时候让走索引成为可能，同时，表达意思会相对清晰一点。
+
+
+
+### 避免超过5个表连接
+
+- 连表越多，编译的时间和开销也就越大。
+- 把[连接表](https://www.zhihu.com/search?q=连接表&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra={"sourceType"%3A"article"%2C"sourceId"%3A"260536848"})拆开成较小的几个执行，可读性更高。
+- 如果一定需要连接很多表才能得到数据，那么意味着糟糕的设计了。
+
+
+
+### 避免超过5个索引
+
+- 索引并不是越多越好，索引虽然提高了查询的效率，但是也降低了插入和更新的效率。
+- insert或update时有可能会重建索引，所以建索引需要慎重考虑，视具体情况来定。
+- 一个表的索引数最好不要超过5个，若太多需要考虑一些索引是否没有存在的必要。
+
+
+
+### 避免建索引在重复型字段上
+
+因为SQL优化器是根据表中数据量来进行查询优化的，如果索引列有大量重复数据，Mysql查询优化器推算发现不走索引的成本更低，很可能就放弃索引了。
+
+
+
+### **exist & in的合理利用**
+
+假设表A表示某企业的员工表，表B表示部门表，查询所有部门的所有员工，很容易有以下SQL:
+
+```sql
+select * from A where deptId in (select deptId from B);
+```
+
+这样写等价于：
+
+> 先查询部门表B
+> select deptId from B
+> 再由部门deptId，查询A的员工
+> select * from A where A.deptId = B.deptId
+
+可以抽象成这样的一个循环：
+
+```sql
+List<> resultSet ;
+    for(int i=0;i<B.length;i++) {
+          for(int j=0;j<A.length;j++) {
+          if(A[i].id==B[j].id) {
+             resultSet.add(A[i]);
+             break;
+          }
+       }
+    }
+```
+
+显然，除了使用in，我们也可以用exists实现一样的查询功能，如下：
+
+```sql
+select * from A where exists (select 1 from B where A.deptId = B.deptId);
+```
+
+因为exists查询的理解就是，先执行主查询，获得数据后，再放到子查询中做条件验证，根据验证结果（true或者false），来决定主查询的数据结果是否得意保留。
+
+那么，这样写就等价于：
+
+> select * from A,先从A表做循环
+> select * from B where A.deptId = B.deptId,再从B表做循环.
+
+同理，可以抽象成这样一个循环：
+
+```sql
+List<> resultSet ;
+    for(int i=0;i<A.length;i++) {
+          for(int j=0;j<B.length;j++) {
+          if(A[i].deptId==B[j].deptId) {
+             resultSet.add(A[i]);
+             break;
+          }
+       }
+    }
+```
+
+数据库最费劲的就是跟程序链接释放。假设链接了两次，每次做上百万次的数据集查询，查完就走，这样就只做了两次；相反建立了上百万次链接，申请链接释放反复重复，这样系统就受不了了。即mysql优化原则，就是小表驱动大表，小的数据集驱动大的数据集，从而让性能更优。
+
+因此，我们要选择最外层循环小的，也就是，如果**B的数据量小于A，适合使用in，如果B的数据量大于A，即适合选择exist**。
+
+
+
+### 尽量使用union all
+
+如果检索结果中不会有重复的记录，推荐union all 替换 union。
+
+反例：
+
+```sql
+select * from user where userid=1 
+union
+select * from user where age = 10
+```
+
+正例：
+
+```sql
+select * from user where userid=1 
+union all
+select * from user where age = 10
+```
+
+理由：
+
+- 如果使用union，不管检索结果有没有重复，都会尝试进行合并，然后在输出最终结果前进行排序。如果已知检索结果没有重复记录，使用union all 代替union，这样会提高效率。
+
+
+
+### 尽量使用数字型而不是字符型
+
+反例：
+
+```text
+king_id` varchar（20） NOT NULL COMMENT '守护者Id'
+```
+
+正例：
+
+```text
+`king_id` int(11) NOT NULL COMMENT '守护者Id'`
+```
+
+理由：
+
+- 相对于数字型字段，字符型会降低查询和连接的性能，并会增加存储开销。
+
+
+
+### 尽可能使用varchar/nvarchar而不是char/nchar
+
+反例：
+
+```sql
+`deptName` char(100) DEFAULT NULL COMMENT '部门名称'
+```
+
+正例：
+
+```sql
+`deptName` varchar(100) DEFAULT NULL COMMENT '部门名称'
+```
+
+理由：
+
+- 因为首先变长字段存储空间小，可以节省存储空间。
+- 其次对于查询来说，在一个相对较小的字段内搜索，效率更高。
+
+
+
+### 字符串类型使用where要加括号
+
+反例：
+
+```sql
+select * from user where userid =123;
+```
+
+正例：
+
+```sql
+select * from user where userid ='123';
+```
+
+理由：
+
+- 为什么第一条语句未加[单引号](https://www.zhihu.com/search?q=单引号&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra={"sourceType"%3A"article"%2C"sourceId"%3A"260536848"})就不走索引了呢？这是因为不加单引号时，是字符串跟数字的比较，它们类型不匹配，MySQL会做隐式的类型转换，把它们转换为浮点数再做比较。
+
+
+
 ### 适当使用覆盖索引
 
 覆盖索引能够使得你的SQL语句不需要回表，仅仅访问索引就能够得到所有需要的数据，大大提高了查询效率。
 
 反例：
 
-```text
+```sql
 // like模糊查询，不走索引了
 select * from user where userid like '%123%'
 ```
 
 正例：
 
-```text
+```sql
 //id为主键，那么为普通索引，即覆盖索引登场了。
 select id,name from user where userid like '%123%';
 ```
@@ -362,19 +679,39 @@ distinct 关键字一般用来过滤重复记录，以返回不重复的记录�
 
 反例：
 
-```text
+```sql
 SELECT DISTINCT * from  user;
 ```
 
 正例：
 
-```text
+```sql
 select DISTINCT name from user;
 ```
 
 理由：
 
 - 带distinct的语句cpu时间和占用时间都高于不带distinct的语句。因为当查询很多字段时，如果使用distinct，数据库引擎就会对数据进行比较，[过滤](https://www.zhihu.com/search?q=过滤&search_source=Entity&hybrid_search_source=Entity&hybrid_search_extra={"sourceType"%3A"article"%2C"sourceId"%3A"260536848"})掉重复数据，然而这个比较，过滤的过程会占用系统资源，cpu时间。
+
+
+
+### 使用explain分析SQL语句
+
+日常开发写SQL的时候，尽量养成一个习惯吧。用explain分析一下你写的SQL，尤其是走不走索引这一块。
+
+```sql
+explain select * from user where userid =10086 or age =18;
+```
+
+
+
+
+
+
+
+
+
+
 
 
 
