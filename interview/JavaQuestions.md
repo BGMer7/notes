@@ -363,7 +363,7 @@ Java 到底是值传递还是引用传递？ - Hollis的回答 - 知乎 https://
 
 ### 23. Java的序列化
 
-序列化：对象序列化是一个用于将对象状态转换为字节流的过程，可以将其保存到磁盘文件中或通过网络发送到任何其他程序，一般保存在内存、文件、数据库中。
+序列化：对象序列化是一个用于将对象状态转换为**字节流**的过程，可以将其保存到磁盘文件中或通过网络发送到任何其他程序，一般保存在内存、文件、数据库中。
 
 反序列化：将磁盘或者文件中的字节流转化为对象。
 
@@ -395,8 +395,8 @@ ObjectInputStream类的readObject()方法用于反序列化。
 
 ### 24. 什么情况需要序列化
 
-1. 当想要把内存中的对象状态保存到一个文件中或者数据库的时候。
-2. 使用套接字在网络上传输的时候。
+1. 当想要把**内存中的对象状态保存到一个文件中或者数据库的时候**。
+2. 使用**套接字在网络上传输的时候**。
 3. 通过RMI传输对象的时候。
 
 
@@ -409,7 +409,7 @@ ObjectInputStream类的readObject()方法用于反序列化。
 
 因为类型擦出的原理，我们不能用基本类型实例化泛型类型：我们可以写`List<Integer>`，但是不能写`List<int>`。
 
-类型擦除的实例：
+类型擦除的实例： 
 
 ```java
 public static <T extends Comparable> T min(T[] n);
@@ -573,7 +573,7 @@ public static void main(String[] args) {
     After invoke sayHello
 ```
 
-通过Proxy类的静态方法newProxyInstance返回一个接口的代理实例。针对不同的代理类，传入相应的代理程序控制器InvocationHandler。
+通过**Proxy类的静态方法newProxyInstance返回一个接口的代理实例。**针对不同的代理类，传入相应的代理程序控制器InvocationHandler。
 如果新来一个被代理类Bye，如：
 
 ```java
@@ -629,7 +629,7 @@ public static void main(String[] args) {
 
 2. 动态代理的本质
 
-   动态代理的本质是省略了.java文件，因为我们实际上并没有编写相应的Java代码，但是我们直接使用了字节码，也就是class文件。所以动态代理的实际本质是省略源文件的编写，直接在运行期生成class文件。
+   动态代理的本质是省略了.java文件，因为我们实际上并没有编写相应的Java代码，但是我们直接使用了字节码，也就是class文件。**所以动态代理的实际本质是省略源文件的编写，直接在运行期生成class文件。**
 
 
 
@@ -666,6 +666,7 @@ public class ProxyHandler implements InvocationHandler {
         System.out.println("After invoke " + method.getName());
         return null;
     }
+    
 }
 ```
 
@@ -760,9 +761,9 @@ public class Test{
 
 ### 34. String str = “i” 与 String str = new String(“i”) 
 
-String str = "i"的写法JVM会将其分配到常量池中。
+**String str = "i"的写法JVM会将其分配到常量池中。**
 
-String str = new String("i")的写法会将其分配到堆内存中，也就是字符串常量池。
+**String str = new String("i")的写法会将其分配到堆内存中，也就是字符串常量池。**
 
 
 
@@ -883,7 +884,7 @@ LinkedList 链表由一系列表项连接而成，一个表项包含 3 个部分
 1. 如果增删都是在末尾来操作【每次调用的都是 remove() 和 add()】，此时 ArrayList 就不需要移动和复制数组来进行操作了。如果数据量有百万级的时，速度是会比 LinkedList 要快的。
 2. 如果删除操作的位置是在中间。由于 LinkedList 的消耗主要是在遍历上，ArrayList 的消耗主要是在移动和复制上（底层调用的是 arrayCopy() 方法，是 native 方法）。LinkedList 的遍历速度是要慢于 ArrayList 的复制移动速度的如果数据量有百万级的时，还是 ArrayList 要快。
 
-ArrayList 用 for 循环遍历比 iterator 迭代器遍历快，LinkedList 用 iterator 迭代器遍历比 for 循环遍历快。所以说，当我们在做项目时，应该考虑到 List 集合的不同子类采用不同的遍历方式，能够提高性能。
+**ArrayList 用 for 循环遍历比 iterator 迭代器遍历快，LinkedList 用 iterator 迭代器遍历比 for 循环遍历快。**所以说，当我们在做项目时，应该考虑到 List 集合的不同子类采用不同的遍历方式，能够提高性能。
 
 
 
@@ -891,7 +892,7 @@ ArrayList 用 for 循环遍历比 iterator 迭代器遍历快，LinkedList 用 i
 
 1. 当使用 add 方法的时候首先调用 ensureCapacityInternal 方法，传入 size+1 进去，检查是否需要扩充 elementData 数组的大小；
 2. newCapacity = 扩充数组为原来的 1.5 倍(不能自定义)，如果还不够，就使用它指定要扩充的大小 minCapacity ，然后判断 minCapacity 是否大于 MAX_ARRAY_SIZE(Integer.MAX_VALUE – 8) ，如果大于，就取 Integer.MAX_VALUE；
-3. ArrayList 中 copy 数组的核心就是 System.arraycopy 方法，将 original 数组的所有数据复制到 copy 数组中，这是一个本地方法。
+3. **ArrayList 中 copy 数组的核心就是 System.arraycopy 方法，将 original 数组的所有数据复制到 copy 数组中，这是一个本地方法。**
 
  
 
@@ -941,7 +942,7 @@ static class Node<K,V> implements Map.Entry<K,V> {
 }
 ```
 
-> HashMap是基于hash表实现的，而hash表底层是由**数组**加**链表**实现的。
+> **HashMap是基于hash表实现的，而hash表底层是由数组加链表实现的。**
 >
 > HashMap其实就是一个Entry数组，Entry对象中包含了键和值，**其中next也是一个Entry对象，它就是用来处理hash冲突的，形成一个链表。**
 
@@ -952,6 +953,19 @@ HashMap();
 HashMap(int initialCapacity);
 HashMap(int initialCapacity, float loadFactor);
 ```
+
+
+
+Hashmap里面的bucket出现了单链表的形式，散列表要解决的一个问题就是散列值的冲突问题，通常是两种方法：链表法和开放地址法。
+
+链表法就是将相同hash值的对象组织成一个链表放在hash值对应的槽位；
+
+开放地址法是通过一个探测算法，当某个槽位已经被占据的情况下继续查找下一个可以使用的槽位。
+————————————————
+版权声明：本文为CSDN博主「Jasonakeke」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/weixin_43344151/article/details/125939757
+
+
 
 
 
@@ -1040,7 +1054,7 @@ HashMap(int initialCapacity, float loadFactor);
 
 ### 4. HashMap.put()
 
-当我们想往一个 HashMap 中添加一对 key-value 时，系统首先会计算 key 的 hash 值，然后根据 hash 值确认在 table 中存储的位置。
+当我们想往一个 HashMap 中添加一对 key-value 时，系统首先会计算 key 的 hash 值，**然后根据 hash 值确认在 table 中存储的位置**。
 
 这个计算过程就是使用二级制&运算计算出是否没有元素，如果没有元素，就直接插入，否则迭代该处元素链表并依次比较其 key 的 hash 值。如果两个 hash 值相等且 key 值相等(e.hash hash && ((k = e.key) key || key.equals(k)))，则用新的 Entry 的 value 覆盖原来节点的 value。如果两个 hash 值相等但 key 值不等 ，则进行插入操作。
 
@@ -1074,6 +1088,8 @@ JDK1.8，底层采用**数组 + 链表 / 红黑树**，并且把头插法改成�
 1. 这样做总是能够保证 HashMap 的底层数组长度为 2 的 n 次方。当 length 为 2 的 n 次方时，h & (length – 1) 就相当于对 length 取模，而且速度比直接取模快得多，这是 HashMap 在速度上的一个优化。而且每次扩容时都是翻倍。
 2. 如果 length 为 2 的次幂，则 length – 1 转化为二进制必定是 11111……的形式，在与 h 的二进制进行与操作时效率会非常的快，而且空间不浪费。但是，如果 length 不是 2 的次幂，比如：length 为 15，则 length – 1 为 14，对应的二进制为 1110，在于 h 与操作，最后一位都为 0 ，而 0001，0011，0101，1001，1011，0111，1101 这几个位置永远都不能存放元素了，空间浪费相当大，更糟的是这种情况中，数组可以使用的位置比数组长度小了很多，这意味着进一步增加了碰撞的几率，减慢了查询的效率，这样就会造成空间的浪费。
 
+
+
 ### 8. HashMap的get不能判断是否包含
 
 HashMap 的 get 函数的返回值不能判断一个 key 是否包含在 map 中，因为 get 返回 null 有可能是不包含该 key，也有可能该 key 对应的 value 为 null。因为 HashMap 中允许 key 为 null，也允许 value 为 null。
@@ -1106,9 +1122,15 @@ HashEntry 是目前我们提到的最小的逻辑处理单元了。一个 Concur
 
 
 
+[ConcurrentHashMap（JDK8） - 腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1873182)
+
+
+
+
+
 ### 10. HashMap和ConcurrentHashMap
 
-HashMap 不是线程安全的，而 ConcurrentHashMap 是线程安全的。
+**HashMap 不是线程安全的，而 ConcurrentHashMap 是线程安全的。**
 
 ConcurrentHashMap 采用锁分段技术，将整个Hash桶进行了分段segment，也就是将这个大的数组分成了几个小的片段 segment，而且每个小的片段 segment 上面都有锁存在，那么在插入元素的时候就需要先找到应该插入到哪一个片段 segment，然后再在这个片段上面进行插入，而且这里还需要获取 segment 锁，这样做明显减小了锁的粒度。
 
@@ -1128,6 +1150,23 @@ HashSet 的实现是依赖于 HashMap 的，HashSet 的值都是存储在 HashMa
 
 因此，HashSet 的值是作为 HashMap 的 key 存储在 HashMap 中的，当存储的值已经存在时返回 false。
 
+- 向HashSet 中add ()元素时，判断元素是否存在的依据，不仅要比较hash值，同时还要结合equles 方法比较。 
+- HashSet 中的add ()方法会使用HashMap 的put()方法。 
+- HashMap 的 key 是唯一的，由源码可以看出 HashSet 添加进去的值就是作为HashMap 的key，并且在HashMap中如果K/V相同时，会用新的V覆盖掉旧的V，然后返回旧的V。所以不会重复（HashMap 比较key是否相等是先比较hashcode 再比较equals ）。 
+- 以下是HashSet 部分源码： 
+
+```java
+private static final Object PRESENT = new Object();
+private transient HashMap<E,Object> map;
+public HashSet() {
+    map = new HashMap<>();
+}
+public Boolean add(E e) {
+    // 调用HashMap的put方法,PRESENT是一个至始至终都相同的虚值
+    return map.put(e, PRESENT)==null;
+}
+```
+
 
 
 ### 13. iterator
@@ -1138,6 +1177,23 @@ HashSet 的实现是依赖于 HashMap 的，HashSet 的值都是存储在 HashMa
 2. 使用 next() 获得序列中的下一个元素。　
 3. 使用 hasNext() 检查序列中是否还有元素。　　
 4. 使用 remove() 将迭代器新返回的元素删除。　
+
+Iterator 的特点是只能单向遍历，但是更加安全，因为它可以确保，在当前遍历的集合元素被更改的时候，就会抛出 ConcurrentModifificationException 异常。 
+
+
+
+### 14. 多线程场景下如何使用 ArrayList
+
+- ArrayList 不是线程安全的，如果遇到多线程场景，可以通过 Collections 的 synchronizedList 方法将其转换成线程安全的容器后再使用。例如像下面这样： 
+
+```java
+List<String> synchronizedList = Collections.synchronizedList(list);
+synchronizedList.add("aaa");
+synchronizedList.add("bbb");
+for (int i = 0; i < synchronizedList.size(); i++) {
+System.out.println(synchronizedList.get(i));
+}
+```
 
 
 
@@ -1980,25 +2036,120 @@ public class ThreadPoolExecutorTest {
 
 
 
+## Spring Boot
+
+### Spring Boot的特点
+
+优点：
+
+- 可以独立打包
+- 配置简单
+- 自动配置
+- 无代码生成和xml配置
+- 解决了大量maven导入和各版本冲突的问题
+- 应用监控
+
+缺点：
+
+由于大量封装，所以入门简单的同时，想要了解深入的原理就需要下更多功夫
+
+
+
+### Spring Boot核心配置
+
+application文件和bootstrap文件
+
+application主要配置这个应用程序的相关参数和自动化装配
+
+bootstrap配置有以下几个应用场景
+
+- 使用Spring Cloud Config配置中心时，需要在bootstrap中配置属性来加载外部配置中心的配置信息
+- 一些固定的不能被覆盖的属性
+- 一些加密解密的场景
+
+
+
+### Spring Boot自动装配的原理
+
+Spring boot会加载大量的自动装配的类
+
+类似AutoConfiguration的自动装配类以及Properties的封装文件中的属性
+
+
+
+### Spring Boot的启动过程
+
+1. Spring Boot在启动的时候从类路径下的META-INF/spring.factories中获取EnableAutoConfiguration指定的值
+2. 将这些值作为自动配置类导入容器 ， 自动配置类就生效 ， 帮我们进行自动配置工作
+3. 整个J2EE的整体解决方案和自动配置都在springboot-autoconfigure的jar包中
+4. 它会给容器中导入非常多的自动配置类 （xxxAutoConfiguration）, 就是给容器中导入这个场景需要的所有组件 ， 并配置好这些组件
+5. 有了自动配置类 ， 免去了我们手动编写配置注入功能组件等的工作
+
+
+
+### Spring Boot的跨域问题
+
+```java
+@Configuration
+public class CorsConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/**")
+                .allowedOrigins("*")
+                .allowCredentials(true)
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .maxAge(3600);
+    }
+}
+```
+
+
+
+项目中前后端分离部署，所以需要解决跨域的问题。
+
+我们使用cookie存放用户登录的信息，在spring拦截器进行权限控制，当权限不符合时，直接返回给用户固定的json结果。
+
+当用户登录以后，正常使用；当用户退出登录状态时或者token过期时，由于拦截器和跨域的顺序有问题，出现了跨域的现象。
+
+我们知道一个http请求，先走filter，到达servlet后才进行拦截器的处理，如果我们把cors放在filter里，就可以优先于权限拦截器执行。
+
+```java
+@Configuration
+public class CorsConfig {
+    @Bean
+    public CorsFilter corsFilter() {
+        CorsConfiguration corsConfiguration = new CorsConfiguration();
+        corsConfiguration.addAllowedOrigin("*");
+        corsConfiguration.addAllowedHeader("*");
+        corsConfiguration.addAllowedMethod("*");
+        corsConfiguration.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource urlBasedCorsConfigurationSource = new UrlBasedCorsConfigurationSource();
+        urlBasedCorsConfigurationSource.registerCorsConfiguration("/**", corsConfiguration);
+        return new CorsFilter(urlBasedCorsConfigurationSource);
+    }
+}
+```
+
+
+
+### Spring Boot监视器
+
+Spring boot actuator是spring启动框架中的重要功能之一。Spring boot监视器可帮助您访问生产环境中正在运行的应用程序的当前状态。有几个指标必须在生产环境中进行检查和监控。
+
+即使一些外部应用程序可能正在使用这些服务来向相关人员触发警报消息。监视器模块公开了一组可直接作为HTTPURL访问的REST端点来检查状态。
 
 
 
 
 
+### Spring Boot的jar
 
+Spring Boot 项目**最终打包成的 jar 是可执行 jar** ，这种 jar 可以直接通过 `java -jar xxx.jar` 命令来运行，这种 jar 不可以作为普通的 jar 被其他项目依赖，即使依赖了也无法使用其中的类。
 
+SpringBoot 的 jar 无法被其他项目依赖，主要还是他和普通 jar 的结构不同。普通的 jar 包，解压后直接就是包名，包里就是我们的代码，而 Spring Boot 打包成的可执行 jar 解压后，在 `\BOOT-INF\classes` 目录下才是我们的代码，因此无法被直接引用。
 
-
-
-
-
-
-
-
-
-
-
-
+如果非要引用，可以在 pom.xml 文件中增加配置，将 Spring Boot 项目打包成两个 jar ，一个可执行，一个可引用。
 
 
 
