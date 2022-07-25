@@ -445,6 +445,76 @@ CAS的缺点：
 
 
 
+
+
+### MySQL Explain
+
+[mysql explain详解 - 腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1093229)
+
+通过 explain 我们可以知道以下信息：**表的读取顺序，数据读取操作的类型，哪些索引可以使用，哪些索引实际使用了，表之间的引用，每张表有多少行被优化器查询**等信息。
+
+
+
+下面是使用 explain 的例子： 
+
+在 select 语句之前增加 explain 关键字，[MySQL](https://cloud.tencent.com/product/cdb?from=10680) 会在查询上设置一个标记，执行查询时，会返回执行计划的信息，而不是执行这条SQL（如果 from 中包含子查询，仍会执行该子查询，将结果放入临时表中）。
+
+```sql
+mysql> explain select * from actor;
++----+-------------+-------+------+---------------+------+---------+------+------+-------+
+| id | select_type | table | type | possible_keys | key  | key_len | ref  | rows | Extra |
++----+-------------+-------+------+---------------+------+---------+------+------+-------+
+|  1 | SIMPLE      | actor | ALL  | NULL          | NULL | NULL    | NULL |    2 | NULL  |
++----+-------------+-------+------+---------------+------+---------+------+------+-------+
+```
+
+
+
+**select_type代表查询的类型：**
+
+主要有几种关键的类型：
+
+- **SIMPLLE**：简单查询，该查询不包含 UNION 或子查询
+- **PRIMARY**：如果查询包含UNION 或子查询，则**最外层的查询**被标识为PRIMARY
+- UNION：表示此查询是 UNION 中的第二个或者随后的查询
+- DEPENDENT：UNION 满足 UNION 中的第二个或者随后的查询，其次取决于外面的查询
+- UNION RESULT：UNION 的结果
+- **SUBQUERY**：子查询中的第一个select语句(该子查询不在from子句中)
+- DEPENDENT SUBQUERY：子查询中的 第一个 select，同时取决于外面的查询
+- **DERIVED**：包含在from子句中子查询(也称为派生表)
+- UNCACHEABLE SUBQUERY：满足是子查询中的第一个 select 语句，同时意味着 select 中的某些特性阻止结果被缓存于一个 Item_cache 中
+- UNCACHEABLE UNION：满足此查询是 UNION 中的第二个或者随后的查询，同时意味着 select 中的某些特性阻止结果被缓存于一个 Item_cache 中
+
+
+
+**table代表正在查询的表名：**
+
+
+
+**type：**该列称为**关联类型或者访问类型**，它指明了MySQL决定如何查找表中符合条件的行，同时**是我们判断查询是否高效的重要依据**。
+
+以下为常见的取值
+
+- ALL：**全表扫描**，这个类型是性能最差的查询之一。通常来说，我们的查询不应该出现 ALL 类型，因为这样的查询，在数据量最大的情况下，对数据库的性能是巨大的灾难。
+- index：**全索引扫描**，和 ALL 类型类似，只不过 ALL 类型是全表扫描，而 index 类型是扫描全部的索引，主要优点是避免了排序，但是开销仍然非常大。如果在 Extra 列看到 Using index，说明正在使用覆盖索引，只扫描索引的数据，它比按索引次序全表扫描的开销要少很多。
+- range：**范围扫描**，就是一个有限制的索引扫描，它开始于索引里的某一点，返回匹配这个值域的行。这个类型通常出现在 `=、<>、>、>=、<、<=、IS NULL、<=>、BETWEEN、IN()` 的操作中，key 列显示使用了哪个索引，当 type 为该值时，则输出的 ref 列为 NULL，并且 key_len 列是此次查询中使用到的索引最长的那个。
+- ref：一种索引访问，也称索引查找，它返回所有匹配某个单个值的行。此类型通常出现在多表的 join 查询, 针对于非唯一或非主键索引, 或者是使用了最左前缀规则索引的查询。
+- eq_ref：使用这种索引查找，最多只返回一条符合条件的记录。在使用唯一性索引或主键查找时会出现该值，非常高效。
+- const、system：该表至多有一个匹配行，在查询开始时读取，或者该表是系统表，只有一行匹配。其中 const 用于在和 primary key 或 unique 索引中有固定值比较的情形。
+- NULL：在执行阶段不需要访问表。
+
+
+
+[面试前必须知道的MySQL命令【explain】 - Java3y - 博客园 (cnblogs.com)](https://www.cnblogs.com/Java3y/p/10075578.html)
+
+
+
+
+
+
+
+
+
 ## MySQL的大数据场景
 
 ### NO SELECT *
