@@ -2439,7 +2439,7 @@ public class MyThreadPool {
 }
 ```
 
-大部分的开发规范都会要求禁止使用快捷线程池，要求通过标准构造器ThreadPoolExecutor去构造线程池，Executors工厂类创建线程池的快捷工厂方法。
+**大部分的开发规范都会要求禁止使用快捷线程池，要求通过标准构造器ThreadPoolExecutor去构造线程池，Executors工厂类创建线程池的快捷工厂方法。**
 
 ```java
 // 使用标准构造器构造一个普通线程池
@@ -2454,7 +2454,163 @@ public ThreadPoolExecutor(int corePoolSize,                   	// 核心线程�
 
 
 
+### submit & execute
+
+简单来说，submit和execute的关系在于提交数据的不同
+
+**Callable类型的任务是可以返回执行结果的，而Runnable类型的任务不可以返回执行结果。**
+
+**Runnable和Callable的主要区别为：Callable允许有返回值，Runnable不允许有返回值；Callable允许抛出异常，Runnable不允许抛出异常。**
+
+- submit既可以提交Runnable类型的任务，也可以提交Callable类型的任务，**会有一个类型为Future的返回值**，但当任务类型为Runnable时，返回值为null。
+- **execute在执行任务时，如果遇到异常会直接抛出，而submit不会直接抛出**，**只有在使用Future的get方法获取返回值时，才会抛出异常**。
+
+
+
+execute(runnable)
+
+```java
+package com.javaBase.LineDistancePond;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+/**
+ * 〈一句话功能简述〉;
+ * 〈execute与submit的区别〉
+ */
+public class TestThreadPoolBegin {
+    public static void main(String[] args) throws Exception{
+        ExecutorService es = Executors.newSingleThreadExecutor();
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("Runnable线程处理开始...");
+                int a = 0;
+                int b = 3;
+                System.out.println("除以0的结果为：" + b/a);
+                System.out.println("Runnable线程处理结束...");
+            }
+        };
+        es.execute(runnable);
+        es.shutdown();
+    }
+}
+```
+
+运行结果：
+
+```java
+Exception in thread "pool-1-thread-1" java.lang.ArithmeticException: / by zero
+Runnable线程处理开始...
+    at com.javaBase.LineDistancePond.TestThreadPoolBegin$1.run(TestThreadPoolBegin.java:24)
+    at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+    at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+    at java.lang.Thread.run(Thread.java:745)
+
+Process finished with exit code 0
+```
+
+
+
+submit(runnable)
+
+```java
+package com.javaBase.LineDistancePond;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+/**
+ * 〈一句话功能简述〉;
+ * 〈execute与submit的区别〉
+ */
+public class TestThreadPoolBegin {
+
+    public static void main(String[] args) throws Exception{
+        ExecutorService es = Executors.newSingleThreadExecutor();
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("Runnable线程处理开始...");
+                int a = 0;
+                int b = 3;
+                System.out.println("除以0的结果为：" + b/a);
+                System.out.println("Runnable线程处理结束...");
+            }
+        };
+        es.submit(runnable);
+        es.shutdown();
+    }
+}
+```
+
+运行结果：
+
+```
+Runnable线程处理开始...
+
+Process finished with exit code 0
+```
+
  
+
+如果get结果：
+
+```java
+package com.javaBase.LineDistancePond;
+
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+/**
+ * 〈一句话功能简述〉;
+ * 〈execute与submit的区别〉
+ */
+public class TestThreadPoolBegin {
+
+    public static void main(String[] args) throws Exception{
+        ExecutorService es = Executors.newSingleThreadExecutor();
+        Callable callable = new Callable() {
+            @Override
+            public Object call() throws Exception {
+                System.out.println("线程处理开始...");
+                int a = 0;
+                int b = 3;
+                System.out.println("除以0的结果为：" + b/a);
+                System.out.println("线程处理结束...");
+                return "0";
+            }
+        };
+        Future<String> future = es.submit(callable);
+        System.out.println("任务执行完成，结果为：" + future.get());
+    }
+}
+```
+
+运行结果：
+
+```
+Exception in thread "main" java.util.concurrent.ExecutionException: java.lang.ArithmeticException: / by zero
+    at java.util.concurrent.FutureTask.report(FutureTask.java:122)
+    at java.util.concurrent.FutureTask.get(FutureTask.java:192)
+    at com.javaBase.LineDistancePond.TestThreadPoolBegin.main(TestThreadPoolBegin.java:32)
+Caused by: java.lang.ArithmeticException: / by zero
+    at com.javaBase.LineDistancePond.TestThreadPoolBegin$1.call(TestThreadPoolBegin.java:26)
+    at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+    at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+    at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+    at java.lang.Thread.run(Thread.java:745)
+线程处理开始...
+```
+
+
+
+
+
+
 
 
 
@@ -4394,6 +4550,10 @@ After...
 Around...twice
 ```
 
+[@Pointcut 的 12 种用法，你知道几种？ - 腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1655923)
+
+
+
 
 
 ## Design patterns
@@ -5809,7 +5969,7 @@ i=2 -> h = 31 * (31 * (31 * 0 + val[0]) + val[1]) + val[2]
 >    ```
 >    Prime numbers are chosen to best distribute data among hash buckets.  
 >    If the distribution of inputs is random and evenly spread, then the  choice of the hash code/modulus does not matter. It only has an impact  when there is a certain pattern to the inputs.
->                                           
+>                                              
 >    This is often the case when dealing with memory locations. 
 >    For  example, all 32-bit integers are aligned to addresses divisible by 4.  
 >    Check out the table below to visualize the effects of using a prime vs.  non-prime modulus:
