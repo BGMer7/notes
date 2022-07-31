@@ -680,13 +680,45 @@ Redis多副本，采用主从（replication）部署结构，相较于单副本�
 
 
 
+### Redis主从模式
+
+主从复制模式中包含一个主数据库实例（master）与一个或多个从数据库实例（slave），如下图
+
+
+
+
+
+![img](https://pic4.zhimg.com/80/v2-8c5ff51b6aa9f933231e4c3f50cfdd6f_720w.jpg)
+
+
+
+
+
+客户端可对主数据库进行读写操作，对从数据库进行读操作，主数据库写入的数据会实时自动同步给从数据库。
+
+具体工作机制为：
+
+- **slave启动后，向master发送SYNC命令**，master接收到SYNC命令后**通过bgsave保存快照**（即上文所介绍的RDB持久化），并使用缓冲区记录保存快照这段时间内执行的写命令
+- master将保存的快照文件发送给slave，并继续记录执行的写命令
+- slave接收到快照文件后，加载快照文件，载入数据
+- master快照发送完后开始向slave发送缓冲区的写命令，slave接收命令并执行，完成复制初始化
+- **此后master每次执行一个写命令都会同步发送给slave，保持master与slave之间数据的一致性**
+
+
+
+
+
 ### TBD Redis哨兵Sentinel
 
 
 
 
 
-### TBD Redis Cluster
+### Redis Cluster
+
+通过Docker实现：
+
+docker network create redis --subnet 172.28.0.0/16
 
 
 
@@ -699,6 +731,112 @@ Redis多副本，采用主从（replication）部署结构，相较于单副本�
 ### TBD Redis主从复制
 
 
+
+
+
+
+
+### Redis实现分布式锁
+
+[Redis：Redisson分布式锁的使用（推荐使用）](https://blog.csdn.net/chuanchengdabing/article/details/121210426)
+
+分布式锁可以使用MySQL缓存、ZooKeeper、Redis缓存。
+
+Redisson是架设在Redis基础上的一个Java驻内存数据网格（In-Memory Data Grid）。
+Redisson在**基于NIO的Netty框架**上，生产环境使用分布式锁。
+
+```xml
+<dependency>
+    <groupId>org.redisson</groupId>
+    <artifactId>redisson</artifactId>
+    <version>2.7.0</version>
+</dependency>
+```
+
+配置redisson管理类：
+
+```java
+public class RedissonManager {
+  private static Config config = new Config();
+  //声明redisso对象
+  private static Redisson redisson = null;
+  
+   //实例化redisson
+	static{
+	  config.useClusterServers()
+	  // 集群状态扫描间隔时间，单位是毫秒
+	 .setScanInterval(2000)
+	  //cluster方式至少6个节点(3主3从，3主做sharding，3从用来保证主宕机后可以高可用)
+	 .addNodeAddress("redis://127.0.0.1:6379" )
+	 .addNodeAddress("redis://127.0.0.1:6380")
+	 .addNodeAddress("redis://127.0.0.1:6381")
+	 .addNodeAddress("redis://127.0.0.1:6382")
+	 .addNodeAddress("redis://127.0.0.1:6383")
+	 .addNodeAddress("redis://127.0.0.1:6384");
+	 
+	  //得到redisson对象
+	  redisson = (Redisson) Redisson.create(config);
+	}
+	
+	  //获取redisson对象的方法
+	  public static Redisson getRedisson(){
+	    return redisson;
+	 }
+}
+————————————————
+版权声明：本文为CSDN博主「穿城大饼」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
+原文链接：https://blog.csdn.net/chuanchengdabing/article/details/121210426
+```
+
+加锁与释放锁：
+
+```java
+public class DistributedRedisLock {
+  //从配置类中获取redisson对象
+  private static Redisson redisson = RedissonManager.getRedisson();
+  private static final String LOCK_TITLE = "redisLock_";
+  
+  //加锁
+  public static boolean acquire(String lockName){
+    //声明key对象
+    String key = LOCK_TITLE + lockName;
+    //获取锁对象
+    RLock mylock = redisson.getLock(key);
+    //加锁，并且设置锁过期时间3秒，防止死锁的产生  uuid+threadId
+    mylock.lock(2,3,TimeUtil.SECOND);
+    //加锁成功
+    return  true;
+  }
+  
+  //锁的释放
+  public static void release(String lockName){
+    //必须是和加锁时的同一个key
+    String key = LOCK_TITLE + lockName;
+    //获取所对象
+    RLock mylock = redisson.getLock(key);
+    //释放锁（解锁）
+    mylock.unlock();
+  
+  }
+}
+```
+
+具体业务逻辑中使用分布式锁：
+
+```xml
+public String discount() throws IOException{
+    String key = "lock001";
+    //加锁
+    DistributedRedisLock.acquire(key);
+    //执行具体业务逻辑
+    dosomething
+    //释放锁
+    DistributedRedisLock.release(key);
+    //返回结果
+    return dosomething;
+ }
+
+```
 
 
 
