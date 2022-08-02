@@ -509,6 +509,475 @@ GC Roots 并不包括堆中对象所引用的对象，这样就不会有循环�
 
 
 
+## JVM cmds
+
+Sun JDK监控和故障处理命令有jps jstat jmap jhat jstack jinfo下面做一一介绍
+
+```shell
+[root@rock1 ~]# jps -l
+26304 gateway.jar
+1937 sun.tools.jps.Jps
+[root@rock1 ~]# jps -m
+26304 jar
+1986 Jps -m
+[root@rock1 ~]# jps -q
+26304
+2027
+[root@rock1 ~]# jps -v
+26304 jar -Xms2048m -Xmx4096m
+2054 Jps -Denv.class.path=.:/data/java/jdk/lib:/data/java/jdk/jre/lib: -Dapplication.home=/data/java/jdk -Xms8m
+
+[root@rock1 ~]# jstack gc  26304
+Attaching to core 26304 from executable gc, please wait...
+Error attaching to core file: cannot open binary file
+sun.jvm.hotspot.debugger.DebuggerException: cannot open binary file
+        at sun.jvm.hotspot.debugger.linux.LinuxDebuggerLocal.attach0(Native Method)
+        at sun.jvm.hotspot.debugger.linux.LinuxDebuggerLocal.attach(LinuxDebuggerLocal.java:286)
+        at sun.jvm.hotspot.HotSpotAgent.attachDebugger(HotSpotAgent.java:673)
+        at sun.jvm.hotspot.HotSpotAgent.setupDebuggerLinux(HotSpotAgent.java:611)
+        at sun.jvm.hotspot.HotSpotAgent.setupDebugger(HotSpotAgent.java:337)
+        at sun.jvm.hotspot.HotSpotAgent.go(HotSpotAgent.java:304)
+        at sun.jvm.hotspot.HotSpotAgent.attach(HotSpotAgent.java:156)
+        at sun.jvm.hotspot.tools.Tool.start(Tool.java:191)
+        at sun.jvm.hotspot.tools.Tool.execute(Tool.java:118)
+        at sun.jvm.hotspot.tools.JStack.main(JStack.java:92)
+        at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+        at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+        at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+        at java.lang.reflect.Method.invoke(Method.java:498)
+        at sun.tools.jstack.JStack.runJStackTool(JStack.java:140)
+        at sun.tools.jstack.JStack.main(JStack.java:106)
+
+[root@rock1 ~]# jstack 26304
+2022-07-31 22:17:03
+Full thread dump Java HotSpot(TM) 64-Bit Server VM (25.202-b08 mixed mode):
+
+"Attach Listener" #15234 daemon prio=9 os_prio=0 tid=0x00007f09f0002000 nid=0x95c waiting on condition [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Keep-Alive-Timer" #15233 daemon prio=8 os_prio=0 tid=0x00007f09a4003800 nid=0x54a waiting on condition [0x00007f09e4173000]
+   java.lang.Thread.State: TIMED_WAITING (sleeping)
+        at java.lang.Thread.sleep(Native Method)
+        at sun.net.www.http.KeepAliveCache.run(KeepAliveCache.java:172)
+        at java.lang.Thread.run(Thread.java:748)
+
+"boundedElastic-86" #13412 daemon prio=5 os_prio=0 tid=0x00007f09c851e000 nid=0x1377 waiting on condition [0x00007f09806f0000]
+   java.lang.Thread.State: WAITING (parking)
+        at sun.misc.Unsafe.park(Native Method)
+        - parking to wait for  <0x00000006cc315ae0> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+        at java.util.concurrent.locks.LockSupport.park(LockSupport.java:175)
+        at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2039)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:1081)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:809)
+        at java.util.concurrent.ThreadPoolExecutor.getTask(ThreadPoolExecutor.java:1074)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1134)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+        at java.lang.Thread.run(Thread.java:748)
+
+"boundedElastic-90" #13413 daemon prio=5 os_prio=0 tid=0x00007f09cc01f800 nid=0x1376 waiting on condition [0x00007f09807f1000]
+   java.lang.Thread.State: WAITING (parking)
+        at sun.misc.Unsafe.park(Native Method)
+        - parking to wait for  <0x00000006cc3160c8> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+        at java.util.concurrent.locks.LockSupport.park(LockSupport.java:175)
+        at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2039)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:1081)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:809)
+        at java.util.concurrent.ThreadPoolExecutor.getTask(ThreadPoolExecutor.java:1074)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1134)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+        at java.lang.Thread.run(Thread.java:748)
+
+"boundedElastic-88" #13411 daemon prio=5 os_prio=0 tid=0x00007f09b853e800 nid=0x1375 waiting on condition [0x00007f09808f2000]
+   java.lang.Thread.State: WAITING (parking)
+        at sun.misc.Unsafe.park(Native Method)
+        - parking to wait for  <0x00000006cc315508> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+        at java.util.concurrent.locks.LockSupport.park(LockSupport.java:175)
+        at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2039)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:1081)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:809)
+        at java.util.concurrent.ThreadPoolExecutor.getTask(ThreadPoolExecutor.java:1074)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1134)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+        at java.lang.Thread.run(Thread.java:748)
+
+"boundedElastic-89" #13410 daemon prio=5 os_prio=0 tid=0x00007f09a0017800 nid=0x1374 waiting on condition [0x00007f09e4375000]
+   java.lang.Thread.State: WAITING (parking)
+        at sun.misc.Unsafe.park(Native Method)
+        - parking to wait for  <0x00000006cc3166b0> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+        at java.util.concurrent.locks.LockSupport.park(LockSupport.java:175)
+        at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2039)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:1081)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:809)
+        at java.util.concurrent.ThreadPoolExecutor.getTask(ThreadPoolExecutor.java:1074)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1134)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+        at java.lang.Thread.run(Thread.java:748)
+
+"boundedElastic-87" #13409 daemon prio=5 os_prio=0 tid=0x00007f09cc01e800 nid=0x1373 waiting on condition [0x00007f09e4274000]
+   java.lang.Thread.State: WAITING (parking)
+        at sun.misc.Unsafe.park(Native Method)
+        - parking to wait for  <0x00000006cc314f20> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+        at java.util.concurrent.locks.LockSupport.park(LockSupport.java:175)
+        at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2039)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:1081)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:809)
+        at java.util.concurrent.ThreadPoolExecutor.getTask(ThreadPoolExecutor.java:1074)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1134)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+        at java.lang.Thread.run(Thread.java:748)
+
+"parallel-4" #58 daemon prio=5 os_prio=0 tid=0x00007f09c8162800 nid=0x6867 waiting on condition [0x00007f098fffe000]
+   java.lang.Thread.State: WAITING (parking)
+        at sun.misc.Unsafe.park(Native Method)
+        - parking to wait for  <0x00000006c0e54f88> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+        at java.util.concurrent.locks.LockSupport.park(LockSupport.java:175)
+        at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2039)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:1081)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:809)
+        at java.util.concurrent.ThreadPoolExecutor.getTask(ThreadPoolExecutor.java:1074)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1134)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+        at java.lang.Thread.run(Thread.java:748)
+
+"parallel-3" #57 daemon prio=5 os_prio=0 tid=0x00007f09b8348000 nid=0x6772 waiting on condition [0x00007f098c6e7000]
+   java.lang.Thread.State: WAITING (parking)
+        at sun.misc.Unsafe.park(Native Method)
+        - parking to wait for  <0x00000006c0e55458> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+        at java.util.concurrent.locks.LockSupport.park(LockSupport.java:175)
+        at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2039)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:1081)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:809)
+        at java.util.concurrent.ThreadPoolExecutor.getTask(ThreadPoolExecutor.java:1074)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1134)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+        at java.lang.Thread.run(Thread.java:748)
+
+"com.alibaba.nacos.client.Worker.longPolling.fixed-10.189.66.196_8848-dev" #56 daemon prio=5 os_prio=0 tid=0x00007f09b0005800 nid=0x6755 runnable [0x00007f098c7e8000]
+   java.lang.Thread.State: RUNNABLE
+        at java.net.SocketInputStream.socketRead0(Native Method)
+        at java.net.SocketInputStream.socketRead(SocketInputStream.java:116)
+        at java.net.SocketInputStream.read(SocketInputStream.java:171)
+        at java.net.SocketInputStream.read(SocketInputStream.java:141)
+        at java.io.BufferedInputStream.fill(BufferedInputStream.java:246)
+        at java.io.BufferedInputStream.read1(BufferedInputStream.java:286)
+        at java.io.BufferedInputStream.read(BufferedInputStream.java:345)
+        - locked <0x0000000791a15018> (a java.io.BufferedInputStream)
+        at sun.net.www.http.HttpClient.parseHTTPHeader(HttpClient.java:735)
+        at sun.net.www.http.HttpClient.parseHTTP(HttpClient.java:678)
+        at sun.net.www.protocol.http.HttpURLConnection.getInputStream0(HttpURLConnection.java:1587)
+        - locked <0x0000000791a0fd88> (a sun.net.www.protocol.http.HttpURLConnection)
+        at sun.net.www.protocol.http.HttpURLConnection.getInputStream(HttpURLConnection.java:1492)
+        - locked <0x0000000791a0fd88> (a sun.net.www.protocol.http.HttpURLConnection)
+        at java.net.HttpURLConnection.getResponseCode(HttpURLConnection.java:480)
+        at com.alibaba.nacos.common.http.client.response.JdkHttpClientResponse.getStatusCode(JdkHttpClientResponse.java:75)
+        at com.alibaba.nacos.common.http.client.handler.AbstractResponseHandler.handle(AbstractResponseHandler.java:43)
+        at com.alibaba.nacos.common.http.client.NacosRestTemplate.execute(NacosRestTemplate.java:483)
+        at com.alibaba.nacos.common.http.client.NacosRestTemplate.postForm(NacosRestTemplate.java:407)
+        at com.alibaba.nacos.client.config.http.ServerHttpAgent.httpPost(ServerHttpAgent.java:155)
+        at com.alibaba.nacos.client.config.http.MetricsHttpAgent.httpPost(MetricsHttpAgent.java:68)
+        at com.alibaba.nacos.client.config.impl.ClientWorker.checkUpdateConfigStr(ClientWorker.java:441)
+        at com.alibaba.nacos.client.config.impl.ClientWorker.checkUpdateDataIds(ClientWorker.java:408)
+        at com.alibaba.nacos.client.config.impl.ClientWorker$LongPollingRunnable.run(ClientWorker.java:596)
+        at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)
+        at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.access$201(ScheduledThreadPoolExecutor.java:180)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:293)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+        at java.lang.Thread.run(Thread.java:748)
+
+"parallel-2" #55 daemon prio=5 os_prio=0 tid=0x00007f09cc023000 nid=0x6738 waiting on condition [0x00007f098c8e9000]
+   java.lang.Thread.State: WAITING (parking)
+        at sun.misc.Unsafe.park(Native Method)
+        - parking to wait for  <0x00000006c0e55908> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+        at java.util.concurrent.locks.LockSupport.park(LockSupport.java:175)
+        at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2039)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:1081)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:809)
+        at java.util.concurrent.ThreadPoolExecutor.getTask(ThreadPoolExecutor.java:1074)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1134)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+        at java.lang.Thread.run(Thread.java:748)
+
+"com.alibaba.nacos.client.Worker.longPolling.fixed-10.189.66.196_8848-dev" #54 daemon prio=5 os_prio=0 tid=0x00007f09b4004000 nid=0x672f waiting on condition [0x00007f098c9ea000]
+   java.lang.Thread.State: WAITING (parking)
+        at sun.misc.Unsafe.park(Native Method)
+        - parking to wait for  <0x00000006c057e3e0> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+        at java.util.concurrent.locks.LockSupport.park(LockSupport.java:175)
+        at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2039)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:1081)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:809)
+        at java.util.concurrent.ThreadPoolExecutor.getTask(ThreadPoolExecutor.java:1074)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1134)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+        at java.lang.Thread.run(Thread.java:748)
+
+"reactor-http-epoll-4" #53 daemon prio=5 os_prio=0 tid=0x00007f0988056000 nid=0x670c runnable [0x00007f098daec000]
+   java.lang.Thread.State: RUNNABLE
+        at io.netty.channel.epoll.Native.epollWait(Native Method)
+        at io.netty.channel.epoll.Native.epollWait(Native.java:193)
+        at io.netty.channel.epoll.Native.epollWait(Native.java:186)
+        at io.netty.channel.epoll.EpollEventLoop.epollWaitNoTimerChange(EpollEventLoop.java:290)
+        at io.netty.channel.epoll.EpollEventLoop.run(EpollEventLoop.java:347)
+        at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:986)
+        at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+        at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+        at java.lang.Thread.run(Thread.java:748)
+
+"reactor-http-epoll-3" #52 daemon prio=5 os_prio=0 tid=0x00007f0988055000 nid=0x670b runnable [0x00007f098dbed000]
+   java.lang.Thread.State: RUNNABLE
+        at io.netty.channel.epoll.Native.epollWait(Native Method)
+        at io.netty.channel.epoll.Native.epollWait(Native.java:193)
+        at io.netty.channel.epoll.Native.epollWait(Native.java:186)
+        at io.netty.channel.epoll.EpollEventLoop.epollWaitNoTimerChange(EpollEventLoop.java:290)
+        at io.netty.channel.epoll.EpollEventLoop.run(EpollEventLoop.java:347)
+        at io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:986)
+        at io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+        at io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+        at java.lang.Thread.run(Thread.java:748)
+
+"pool-5-thread-1" #51 daemon prio=5 os_prio=0 tid=0x00007f098800e800 nid=0x670a waiting on condition [0x00007f098deee000]
+   java.lang.Thread.State: WAITING (parking)
+        at sun.misc.Unsafe.park(Native Method)
+        - parking to wait for  <0x00000006c0d00e90> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+        at java.util.concurrent.locks.LockSupport.park(LockSupport.java:175)
+        at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(AbstractQueuedSynchronizer.java:2039)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:1081)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(ScheduledThreadPoolExecutor.java:809)
+        at java.util.concurrent.ThreadPoolExecutor.getTask(ThreadPoolExecutor.java:1074)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1134)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+        at java.lang.Thread.run(Thread.java:748)
+
+run(ThreadPoolExecutor.java:624)
+        at java.lang.Thread.run(Thread.java:748)
+
+
+
+"DestroyJavaVM" #45 prio=5 os_prio=0 tid=0x00007f0a28009800 nid=0x66c1 waiting on condition [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+
+[root@rock1 ~]# jmap 26304
+Attaching to process ID 26304, please wait...
+Debugger attached successfully.
+Server compiler detected.
+JVM version is 25.202-b08
+0x0000000000400000      8K      /data/java/jdk/bin/java
+0x00007f09e4889000      91K     /data/java/jdk/jre/lib/amd64/libnio.so
+0x00007f0a116c5000      50K     /data/java/jdk/jre/lib/amd64/libmanagement.so
+0x00007f0a11bd0000      114K    /data/java/jdk/jre/lib/amd64/libnet.so
+0x00007f0a2cff6000      124K    /data/java/jdk/jre/lib/amd64/libzip.so
+0x00007f0a2d212000      60K     /usr/lib64/libnss_files-2.17.so
+0x00007f0a2d425000      222K    /data/java/jdk/jre/lib/amd64/libjava.so
+0x00007f0a2d653000      64K     /data/java/jdk/jre/lib/amd64/libverify.so
+0x00007f0a2d862000      42K     /usr/lib64/librt-2.17.so
+0x00007f0a2da6a000      1110K   /usr/lib64/libm-2.17.so
+0x00007f0a2dd6c000      16645K  /data/java/jdk/jre/lib/amd64/server/libjvm.so
+0x00007f0a2ed55000      2106K   /usr/lib64/libc-2.17.so
+0x00007f0a2f123000      18K     /usr/lib64/libdl-2.17.so
+0x00007f0a2f327000      106K    /data/java/jdk/lib/amd64/jli/libjli.so
+0x00007f0a2f53f000      138K    /usr/lib64/libpthread-2.17.so
+0x00007f0a2f75b000      159K    /usr/lib64/ld-2.17.so
+[root@rock1 ~]# jstat -gc
+invalid argument count
+Usage: jstat -help|-options
+       jstat -<option> [-t] [-h<lines>] <vmid> [<interval> [<count>]]
+
+Definitions:
+  <option>      An option reported by the -options option
+  <vmid>        Virtual Machine Identifier. A vmid takes the following form:
+                     <lvmid>[@<hostname>[:<port>]]
+                Where <lvmid> is the local vm identifier for the target
+                Java virtual machine, typically a process id; <hostname> is
+                the name of the host running the target Java virtual machine;
+                and <port> is the port number for the rmiregistry on the
+                target host. See the jvmstat documentation for a more complete
+                description of the Virtual Machine Identifier.
+  <lines>       Number of samples between header lines.
+  <interval>    Sampling interval. The following forms are allowed:
+                    <n>["ms"|"s"]
+                Where <n> is an integer and the suffix specifies the units as
+                milliseconds("ms") or seconds("s"). The default units are "ms".
+  <count>       Number of samples to take before terminating.
+  -J<flag>      Pass <flag> directly to the runtime system.
+[root@rock1 ~]# jstat -gc 26304
+ S0C    S1C    S0U    S1U      EC       EU        OC         OU       MC     MU    CCSC   CCSU   YGC     YGCT    FGC    FGCT     GCT
+1024.0 1024.0 544.0   0.0   696832.0 15234.8  1651712.0   202184.5  57984.0 54181.7 7552.0 6809.2   1502    9.077   2      0.120    9.197
+[root@rock1 ~]# jstat -gccapcity 26304
+Unknown option: -gccapcity
+Usage: jstat -help|-options
+       jstat -<option> [-t] [-h<lines>] <vmid> [<interval> [<count>]]
+
+Definitions:
+  <option>      An option reported by the -options option
+  <vmid>        Virtual Machine Identifier. A vmid takes the following form:
+                     <lvmid>[@<hostname>[:<port>]]
+                Where <lvmid> is the local vm identifier for the target
+                Java virtual machine, typically a process id; <hostname> is
+                the name of the host running the target Java virtual machine;
+                and <port> is the port number for the rmiregistry on the
+                target host. See the jvmstat documentation for a more complete
+                description of the Virtual Machine Identifier.
+  <lines>       Number of samples between header lines.
+  <interval>    Sampling interval. The following forms are allowed:
+                    <n>["ms"|"s"]
+                Where <n> is an integer and the suffix specifies the units as
+                milliseconds("ms") or seconds("s"). The default units are "ms".
+  <count>       Number of samples to take before terminating.
+  -J<flag>      Pass <flag> directly to the runtime system.
+[root@rock1 ~]# jstat -gccapacity 26304
+ NGCMN    NGCMX     NGC     S0C   S1C       EC      OGCMN      OGCMX       OGC         OC       MCMN     MCMX      MC     CCSMN    CCSMX     CCSC    YGC    FGC
+698880.0 1397760.0 698880.0 1024.0 1024.0 696832.0  1398272.0  2796544.0  1651712.0  1651712.0      0.0 1099776.0  57984.0      0.0 1048576.0   7552.0   1502     2
+[root@rock1 ~]# jstat -printcompilation 26304
+Compiled  Size  Type Method
+   15430     21    1 reactor/core/publisher/Operators$MultiSubscriptionSubscriber onError
+[root@rock1 ~]# jstat -gcmetacapacity 26304
+   MCMN       MCMX        MC       CCSMN      CCSMX       CCSC     YGC   FGC    FGCT     GCT
+       0.0  1099776.0    57984.0        0.0  1048576.0     7552.0  1502     2    0.120    9.197
+[root@rock1 ~]# jinfo 26304
+Attaching to process ID 26304, please wait...
+Debugger attached successfully.
+Server compiler detected.
+JVM version is 25.202-b08
+Java System Properties:
+
+java.runtime.name = Java(TM) SE Runtime Environment
+java.vm.version = 25.202-b08
+sun.boot.library.path = /data/java/jdk/jre/lib/amd64
+java.protocol.handler.pkgs = org.springframework.boot.loader
+java.vendor.url = http://java.oracle.com/
+java.vm.vendor = Oracle Corporation
+path.separator = :
+file.encoding.pkg = sun.io
+java.vm.name = Java HotSpot(TM) 64-Bit Server VM
+sun.os.patch.level = unknown
+sun.java.launcher = SUN_STANDARD
+user.country = US
+user.dir = /home/app/gateway
+java.vm.specification.name = Java Virtual Machine Specification
+PID = 26304
+java.runtime.version = 1.8.0_202-b08
+java.awt.graphicsenv = sun.awt.X11GraphicsEnvironment
+JM.LOG.PATH = /root/logs
+os.arch = amd64
+java.endorsed.dirs = /data/java/jdk/jre/lib/endorsed
+CONSOLE_LOG_CHARSET = UTF-8
+line.separator =
+
+java.io.tmpdir = /tmp
+java.vm.specification.vendor = Oracle Corporation
+os.name = Linux
+FILE_LOG_CHARSET = UTF-8
+sun.jnu.encoding = UTF-8
+java.library.path = /usr/java/packages/lib/amd64:/usr/lib64:/lib64:/lib:/usr/lib
+spring.beaninfo.ignore = true
+java.specification.name = Java Platform API Specification
+java.class.version = 52.0
+sun.management.compiler = HotSpot 64-Bit Tiered Compilers
+os.version = 3.10.0-862.el7.x86_64
+user.home = /root
+user.timezone = America/New_York
+java.awt.printerjob = sun.print.PSPrinterJob
+file.encoding = UTF-8
+java.specification.version = 1.8
+user.name = root
+java.class.path = gateway.jar
+java.vm.specification.version = 1.8
+sun.arch.data.model = 64
+sun.java.command = gateway.jar
+java.home = /data/java/jdk/jre
+user.language = en
+java.specification.vendor = Oracle Corporation
+awt.toolkit = sun.awt.X11.XToolkit
+java.vm.info = mixed mode
+java.version = 1.8.0_202
+java.ext.dirs = /data/java/jdk/jre/lib/ext:/usr/java/packages/lib/ext
+sun.boot.class.path = /data/java/jdk/jre/lib/resources.jar:/data/java/jdk/jre/lib/rt.jar:/data/java/jdk/jre/lib/sunrsasign.jar:/data/java/jdk/jre/lib/jsse.jar:/data/java/jdk/jre/lib/jce.jar:/data/java/jdk/jre/lib/charsets.jar:/data/java/jdk/jre/lib/jfr.jar:/data/java/jdk/jre/classes
+java.awt.headless = true
+java.vendor = Oracle Corporation
+file.separator = /
+java.vendor.url.bug = http://bugreport.sun.com/bugreport/
+sun.io.unicode.encoding = UnicodeLittle
+sun.cpu.endian = little
+sun.cpu.isalist =
+
+VM Flags:
+Non-default VM flags: -XX:CICompilerCount=3 -XX:InitialHeapSize=2147483648 -XX:MaxHeapSize=4294967296 -XX:MaxNewSize=1431306240 -XX:MinHeapDeltaBytes=524288 -XX:NewSize=715653120 -XX:OldSize=1431830528 -XX:+UseCompressedClassPointers -XX:+UseCompressedOops -XX:+UseFastUnorderedTimeStamps -XX:+UseParallelGC
+Command line:  -Xms2048m -Xmx4096m
+
+[root@rock1 ~]# ps -ef | grep java
+root      5821  1665  0 10:39 pts/1    00:00:00 grep --color=auto java
+root     26304     1  0 Feb16 ?        05:37:38 java -jar -Xms2048m -Xmx4096m gateway.jar
+[root@rock1 ~]# ps -aux | grep java
+root      5835  0.0  0.0 112812   976 pts/1    S+   10:39   0:00 grep --color=auto java
+root     26304  0.1 14.4 8112368 1284168 ?     Sl   Feb16 337:38 java -jar -Xms2048m -Xmx4096m gateway.jar
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[JVM命令大全_yesirwu的博客-CSDN博客](https://blog.csdn.net/yesirwu/article/details/104064304)
+
+[JAVA 线上故障排查完整套路！牛掰！ - 腾讯云开发者社区-腾讯云 (tencent.com)](https://cloud.tencent.com/developer/article/1633434)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
