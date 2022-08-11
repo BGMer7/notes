@@ -663,6 +663,20 @@ interface和abstract class的区别：
 | 抽象方法       | 可以定义抽象方法     | 可以定义抽象方法            |
 | 非抽象方法     | 可以定义非抽象方法   | 可以定义default方法         |
 
+**对比Java 8之后的抽象类和接口：**
+
+接口和抽象类有一些异同点：
+
+1. 接口和抽象类都可以定义方法和属性，方法都可以拥有方法体，但是接口中的有的方法体需要用static或者default修饰，并且接口中的方法只能是public的，抽象类中的方法可以是private或者protected。接口中定义的属性只能是常量并且是静态的，接口的默认修饰符是public static final。
+2. 抽象类有构造方法，用于子类访问父类数据的初始化，接口没有构造方法。
+3. 抽象类和接口都是不能实例化的，但是都可以通过多态的机制通过子类来实现。
+4. 接口可以继承接口，可以单继承也可以多继承，抽象类只能单继承。
+5. 接口只能继承接口， 抽象类可以继承抽象类也可以继承普通类。
+
+
+
+
+
 #### interface inherit
 
 一个interface可以继承另一个interface，同样是使用extends关键字。相当于扩展了接口的方法。
@@ -5969,7 +5983,7 @@ i=2 -> h = 31 * (31 * (31 * 0 + val[0]) + val[1]) + val[2]
 >    ```
 >    Prime numbers are chosen to best distribute data among hash buckets.  
 >    If the distribution of inputs is random and evenly spread, then the  choice of the hash code/modulus does not matter. It only has an impact  when there is a certain pattern to the inputs.
->                                              
+>                                                 
 >    This is often the case when dealing with memory locations. 
 >    For  example, all 32-bit integers are aligned to addresses divisible by 4.  
 >    Check out the table below to visualize the effects of using a prime vs.  non-prime modulus:
