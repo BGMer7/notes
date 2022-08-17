@@ -518,6 +518,265 @@ public class PortController {
 
 
 
+### Spring Cloud Gateway
+
+[SpringCloud gateway （史上最全） - 疯狂创客圈 - 博客园 (cnblogs.com)](https://www.cnblogs.com/crazymakercircle/p/11704077.html)
+
+在微服务架构中，一个系统往往由很多的微服务组成，而这些服务可能分布在不同的机房，不同地区，不同域名下，这种情况下客户端（例如浏览器、手机、软件工具等）想要直接请求服务就需要具体的ip、端口，会带来以下的问题：
+
+1. 当数量巨大，客户端需要维护大量的服务地址，对于客户端来说，是非常繁琐复杂的。
+2. 在某些场景下可能存在跨域访问的问题。
+3. 身份认证的难度很大，每个微服务需要身份认证。
+
+我们可以通过微服务网关来解决这些问题。
+
+
+
+#### API网关
+
+API 网关是一个搭建在客户端和微服务之间的服务，我们可以在 API 网关中处理一些**非业务功能的逻辑**，例如权限**验证、监控、缓存、请求路由**等。
+
+API 网关就像整个微服务系统的门面一样，是系统对外的唯一入口。**有了它，客户端会先将请求发送到 API 网关，然后由 API 网关根据请求的标识信息将请求转发到微服务实例**。
+
+对于服务数量众多、复杂度较高、规模比较大的系统来说，使用 API 网关具有以下好处：
+
+- 客户端通过 API 网关与微服务交互时，**客户端只需要知道 API 网关地址即可**，而不需要维护大量的服务地址，简化了客户端的开发。
+- 客户端直接与 API 网关通信，能够减少客户端与各个服务的交互次数。
+- 客户端与后端的服务耦合度降低。
+- 节省流量，提高性能，提升用户体验。
+- API 网关还提供了安全、流控、过滤、缓存、计费以及监控等 API 管理功能。
+
+
+
+​	
+
+#### Gateway 核心概念
+
+Spring Cloud Gateway 是 Spring Cloud 团队基于 Spring 5.0、Spring Boot 2.0 和 Project Reactor 等技术开发的高性能 API 网关组件。
+
+Spring Cloud Gateway 旨在提供一种简单而有效的途径来发送 API，并为它们提供横切关注点，例如：安全性，监控/指标和弹性。 
+
+> Spring Cloud Gateway 是基于 WebFlux 框架实现的，而 WebFlux 框架底层则使用了高性能的 Reactor 模式通信框架 Netty。
+
+Spring Cloud Gateway 最主要的功能就是路由转发，而在定义转发规则时主要涉及了以下三个核心概念，如下表。
+
+| 核心概念          | 描述                                                         |
+| ----------------- | ------------------------------------------------------------ |
+| Route（路由）     | 网关最基本的模块。它由一个 ID、一个目标 URI、一组断言（Predicate）和一组过滤器（Filter）组成。 |
+| Predicate（断言） | 路由转发的判断条件，我们可以通过 Predicate 对 HTTP 请求进行匹配，例如请**求方式、请求路径、请求头、参数**等，如果请求与断言匹配成功，则将请求转发到相应的服务。 |
+| Filter（过滤器）  | 过滤器，我们可以使用它对请求进行拦截和修改，还可以使用它对上文的响应进行再处理。 |
+
+> 注意：其中 Route 和 Predicate 必须同时声明。
+
+
+
+Spring Cloud Gateway 具有以下特性：
+
+- 基于 Spring Framework 5、Project Reactor 和 Spring Boot 2.0 构建。
+- 能够在任意请求属性上匹配路由。
+- predicates（断言） 和 filters（过滤器）是特定于路由的。
+- 集成了 Hystrix 熔断器。
+- 集成了 Spring Cloud DiscoveryClient（服务发现客户端）。
+- 易于编写断言和过滤器。
+- 能够限制请求频率。
+- 能够重写请求路径。
+
+
+
+#### Gateway工作流程
+
+1. 客户端（调用方）将请求发送到Spring Cloud Gateway上。
+2. Spring Cloud Gateway通过Gateway Handler Mapping找到与请求相匹配的路由，将其发送给Gateway Web Handler。
+3. Gateway Web Handler通过指定的过滤器链（Filter Chain），将请求转发到实际的服务节点中，执行业务逻辑返回响应结果。
+4. 过滤器之间可能会在转发之前或者转发之后执行业务逻辑。
+5. 过滤器（Filter）可以在请求被转发到服务端之前，对请求进行拦截和修改，例如参数校验、权限校验、流量监控、日志输出、以及协议转换。 
+6. 过滤器也可以在请求得到响应之后，对响应做一层拦截和再处理，例如修改相应内容或者响应头，日志输出、流量监控。
+7. 响应原路返回给客户端。
+
+总而言之，客户端发送到Spring Cloud Gateway的请求需要通过一定的匹配条件，才能定位到准确的节点，在请求的前后我们也可以对请求和响应做一些额外的处理。
+
+Predicate 就是路由的匹配条件，而 Filter 就是对请求和响应进行精细化控制的工具。有了这两个元素，再加上目标 URI，就可以实现一个具体的路由了。
+
+
+
+#### Predicate
+
+Spring Cloud Gateway通过Predicate断言来实现Route路由的匹配规则，通俗来说，predicate就是路由的判断条件，请求只有满足了Predicate的条件，才会被正确转发到指定的服务上进行处理。
+
+使用Predicate断言需要注意以下事项：
+
+1. Route和Predicate的关系是一对多，也就是说一个路由可以包含多个不同的断言。
+2. 一个请求想要转发到指定的路由上，就必须同时匹配这个路由的所有断言。
+3. 当一个请求同时满足多个路由的断言条件时，请求只会被首个成功匹配的路由转发。
+
+
+
+常见的 Predicate 断言如下表（假设转发的 URI 为 http://localhost:8001）。
+
+
+
+| 断言    | 示例                                                         | 说明                                                         |
+| ------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| Path    | - Path=/dept/list/**                                         | 当请求路径与 /dept/list/** 匹配时，该请求才能被转发到 http://localhost:8001 上。 |
+| Before  | - Before=2021-10-20T11:47:34.255+08:00[Asia/Shanghai]        | 在 2021 年 10 月 20 日 11 时 47 分 34.255 秒之前的请求，才会被转发到 http://localhost:8001 上。 |
+| After   | - After=2021-10-20T11:47:34.255+08:00[Asia/Shanghai]         | 在 2021 年 10 月 20 日 11 时 47 分 34.255 秒之后的请求，才会被转发到 http://localhost:8001 上。 |
+| Between | - Between=2021-10-20T15:18:33.226+08:00[Asia/Shanghai],2021-10-20T15:23:33.226+08:00[Asia/Shanghai] | 在 2021 年 10 月 20 日 15 时 18 分 33.226 秒 到 2021 年 10 月 20 日 15 时 23 分 33.226 秒之间的请求，才会被转发到 http://localhost:8001 服务器上。 |
+| Cookie  | - Cookie=name,c.biancheng.net                                | 携带 Cookie 且 Cookie 的内容为 name=c.biancheng.net 的请求，才会被转发到 http://localhost:8001 上。 |
+| Header  | - Header=X-Request-Id,\d+                                    | 请求头上携带属性 X-Request-Id 且属性值为整数的请求，才会被转发到 http://localhost:8001 上。 |
+| Method  | - Method=GET                                                 | 只有 GET 请求才会被转发到 http://localhost:8001 上。         |
+
+示例
+
+下面我们就通过一个实例，来演示下 Predicate 是如何使用的。
+
+在 micro-service-cloud-gateway-9527 的类路径（/resources 目录）下，新建一个配置文件 application.yml，配置内容如下。
+
+```yml
+server:
+  port: 9527  #端口号
+spring:
+  application:
+    name: microServiceCloudGateway
+  cloud:
+    gateway: #网关路由配置
+      routes:
+        #将 micro-service-cloud-provider-dept-8001 提供的服务隐藏起来，不暴露给客户端，只给客户端暴露 API 网关的地址 9527
+        - id: provider_dept_list_routh   #路由 id,没有固定规则，但唯一，建议与服务名对应
+          uri: http://localhost:8001          #匹配后提供服务的路由地址
+          predicates:
+            #以下是断言条件，必选全部符合条件
+            - Path=/dept/list/**               #断言，路径匹配 注意：Path 中 P 为大写
+            - Method=GET #只能时 GET 请求时，才能访问
+eureka:
+  instance:
+    instance-id: micro-service-cloud-gateway-9527
+    hostname: micro-service-cloud-gateway
+  client:
+    fetch-registry: true
+    register-with-eureka: true
+    service-url:
+      defaultZone: http://eureka7001.com:7001/eureka/,http://eureka7002.com:7002/eureka/,http://eureka7003.com:7003/eureka/
+```
+
+以上配置中，我们在 spring.cloud.gateway.routes 下使用 predicates 属性，定义了以下两个断言条件：
+
+```
+- Path=/dept/list/**            
+- Method=GET 
+```
+
+
+只有当外部（客户端）发送到 micro-service-cloud-gateway-9527 的 HTTP 请求同时满足以上所有的断言时，该请求才会被转发到指定的服务端中（即 http://localhost:8001）。
+
+ 
+
+#### 动态路由
+
+默认情况下，Spring Cloud Gateway 会根据服务注册中心（例如 Eureka Server）中维护的服务列表，以服务名（spring.application.name）作为路径创建动态路由进行转发，从而实现动态路由功能。
+
+我们可以在配置文件中，将 Route 的 uri 地址修改为以下形式。
+
+```yml
+lb://service-name
+```
+
+以上配置说明如下：
+
+- lb：uri 的协议，表示开启 Spring Cloud Gateway 的负载均衡功能。
+- service-name：服务名，Spring Cloud Gateway 会根据它获取到具体的微服务地址。
+
+
+
+修改 micro-service-cloud-gateway-9527 中 application.yml 的配置，使用注册中心中的微服务名创建动态路由进行转发，配置如下。
+
+```yml
+server:
+  port: 9527 #端口号
+spring:
+  application:
+    name: microServiceCloudGateway  #服务注册中心注册的服务名
+   
+  cloud:
+    gateway: #网关路由配置
+      discovery:
+        locator:
+          enabled: true #默认值为 true，即默认开启从注册中心动态创建路由的功能，利用微服务名进行路由
+      routes:
+        #将 micro-service-cloud-provider-dept-8001 提供的服务隐藏起来，不暴露给客户端，只给客户端暴露 API 网关的地址 9527
+        - id: provider_dept_list_routh   #路由 id,没有固定规则，但唯一，建议与服务名对应
+          uri: lb://MICROSERVICECLOUDPROVIDERDEPT #动态路由，使用服务名代替上面的具体带端口   http://eureka7001.com:9527/dept/list
+          predicates:
+            #以下是断言条件，必选全部符合条件
+            - Path=/dept/list/**    #断言，路径匹配 注意：Path 中 P 为大写
+            - Method=GET #只能时 GET 请求时，才能访问
+eureka:
+  instance:
+    instance-id: micro-service-cloud-gateway-9527
+    hostname: micro-service-cloud-gateway
+  client:
+    fetch-registry: true
+    register-with-eureka: true
+    service-url:
+      defaultZone: http://eureka7001.com:7001/eureka/,http://eureka7002.com:7002/eureka/,http://eureka7003.com:7003/eureka/
+
+```
+
+依次启动注册中心，服务提供者，和网关。
+
+
+
+#### Filter过滤器
+
+通常情况下，处于安全方面的考虑，服务端提供的服务往往都会有一定的校验逻辑，例如用户的登录状态校验，签名校验等。
+
+在微服务架构中，系统由多个微服务构成，所有这些服务都需要这些校验逻辑，此时我们就可以将这些校验逻辑写到Spring Cloud Gateway的过滤器中。
+
+Spring Cloud Gateway 提供了以下两种类型的过滤器，可以对请求和响应进行精细化控制。
+
+| 过滤器类型 | 说明                                                         |
+| ---------- | ------------------------------------------------------------ |
+| Pre 类型   | 这种过滤器在请求被转发到微服务之前可以对请求进行拦截和修改，例如参数校验、权限校验、流量监控、日志输出以及协议转换等操作。 |
+| Post 类型  | 这种过滤器在微服务对请求做出响应后可以对响应进行拦截和再处理，例如修改响应内容或响应头、日志输出、流量监控等。 |
+
+GatewayFilter 是 Spring Cloud Gateway 网关中提供的一种应用在单个或一组路由上的过滤器。它可以对单个路由或者一组路由上传入的请求和传出响应进行拦截，并实现一些与业务无关的功能，比如登陆状态校验、签名校验、权限校验、日志输出、流量监控等。
+
+GatewayFilter 在配置文件（例如 application.yml）中的写法与 Predicate 类似，格式如下。
+
+```yaml
+spring:
+  cloud:
+    gateway: 
+      routes:
+        - id: xxxx
+          uri: xxxx
+          predicates:
+            - Path=xxxx
+          filters:
+            - AddRequestParameter=X-Request-Id,1024 #过滤器工厂会在匹配的请求头加上一对请求头，名称为 X-Request-Id 值为 1024
+            - PrefixPath=/dept #在请求路径前面加上 /dept
+            ……
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Spring Cloud Alibaba
 
 ## Nacos
