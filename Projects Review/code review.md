@@ -354,15 +354,125 @@ Mapper.updateByExample
 
 ### getInstance()
 
+一般常在单例模式中使用getInstance创建对象，但并非私有构造方法+对外通过getInstance提供实例的情况就一定是单例模式。
+
+> 单例模式：
+>
+> 一个私有的构造方法
+>
+> 一个私有的该类型的变量
+>
+> 必须有一个public的方法，且返回类型为该变量，用于对外提供这个私有变量的接口。
+
+单例模式实例：
+
+- Declaring all constructors of the class to be private.
+- Providing a static method that returns a reference to the instance. The lazy  initialization concept is used to write the static methods.
+- The instance is stored as a private static variable.
+
+```java 
+// Class 1
+// Helper class
+class Singleton {
+    // Static variable reference of single_instance
+    // of type Singleton
+    private static Singleton single_instance = null;
+  
+    // Declaring a variable of type String
+    public String s;
+  
+    // Constructor
+    // Here we will be creating private constructor
+    // restricted to this class itself
+    private Singleton()
+    {
+        s = "Hello I am a string part of Singleton class";
+    }
+  
+    // Static method
+    // Static method to create instance of Singleton class
+    public static Singleton getInstance()
+    {
+        if (single_instance == null)
+            single_instance = new Singleton();
+  
+        return single_instance;
+    }
+}
+  
+// Class 2
+// Main class
+class GFG {
+    // Main driver method
+    public static void main(String args[])
+    {
+        // Instantiating Singleton class with variable x
+        Singleton x = Singleton.getInstance();
+  
+        // Instantiating Singleton class with variable y
+        Singleton y = Singleton.getInstance();
+  
+        // Instantiating Singleton class with variable z
+        Singleton z = Singleton.getInstance();
+  
+        // Printing the hash code for above variable as
+        // declared
+        System.out.println("Hashcode of x is "
+                           + x.hashCode());
+        System.out.println("Hashcode of y is "
+                           + y.hashCode());
+        System.out.println("Hashcode of z is "
+                           + z.hashCode());
+  
+        // Condition check
+        if (x == y && y == z) {
+  
+            // Print statement
+            System.out.println(
+                "Three objects point to the same memory location on the heap i.e, to the same object");
+        }
+  
+        else {
+            // Print statement
+            System.out.println(
+                "Three objects DO NOT point to the same memory location on the heap");
+        }
+    }
+}
+
+// 双重检查锁double check lock，线程安全
+public class Singleton{  
+    private static Singleton uniqueInstance;  
+    // 使用private Consructor 確保類別Singleton 的物件(Object)只能透過 API – method : getInstance()。
+private Singleton()
+{
+	// 這裡可以有很多code，所以建立物件(Object)可能需要很多資源/時間。
+}
+	// 因為Constructor已經private，所以需要以下方法讓其他程式調用這個類別。
+    public static Singleton getInstance() {  
+		// 使用 synchronized 關鍵字避免多於一個Thread 進入
+        if(instance == null){
+            synchronized(Singleton.class){
+                if(instance == null){
+                    instance = new Singleton();
+                }    
+            }
+        }         return uniqueInstance;  
+    }  
+}  
+```
+
+
+
+getInstance方法的主要作用，主要
+
+
+
 
 
 ### AOP
 
-
-
-
-
-### @interface
+#### @interface
 
 自定义注解
 
@@ -775,11 +885,64 @@ public class WebLogAspect {
 
 
 
-### JoinPoint & ProceedingJoinPoint
+#### JoinPoint & ProceedingJoinPoint
 
  我们平时在使用springAop的时候，经常是将某一个方法定义为一个切入点，用来做前置，后置或环绕增强，**但如果想得到切入点方法的参数**，以及它的返回值就需要做一些特定的配置。
 
+```java
+@Aspect
+@Component
+public class UserInfoAspect {
+    @Pointcut("execution(* com.*.test(*))")
+    public void test() {}
+    
+    //使用JoinPoint 对象可以接收到切入点方法的参数
+    @AfterReturning(value = "test()")
+    public void logMethodCall(JoinPoint jp) throws Throwable {
 
+        System.out.println("进入后置增强了！");
+        String name = jp.getSignature().getName();
+        System.out.println(name);
+
+        Object[] args = jp.getArgs();
+        for (Object arg : args) {
+            System.out.println("参数：" + arg);
+        }
+    }
+ }
+```
+
+
+
+#### return value
+
+returnValue即为该方法返回值。
+
+```java
+@AfterReturning(value = "buyPoint()", returning = "returnValue")
+public void AfterBuying(JoinPoint jp, Object returnValue) throws Throwable {
+
+    System.out.println("支付已完成。");
+    String name = jp.getSignature().getName();
+    System.out.println("此切面的方法名为：" + name);
+
+    Object[] args = jp.getArgs();
+    for (Object arg : args) {
+        System.out.println("参数值：" + arg);
+    }
+
+    System.out.println("方法返回值的类型为：" + returnValue.getClass().getName());
+}
+
+
+支付已完成。
+此切面的方法名为：buy
+方法返回值的类型为：java.lang.String
+    
+此切面的方法名为：addToCart
+参数：包
+方法返回值的类型为：java.lang.String
+```
 
 
 
@@ -807,35 +970,17 @@ public class WebLogAspect {
 
 ## Spring Boot
 
-### pom.xml
+#### maven
 
-#### dependency
+groupId，artfactId，version，type，classifier，scope，systemPath，exclusions，optional 是 maven的9种依赖属性，
 
+其中groupId，artfactId，version是三个基本的依赖坐标，不可缺少。
 
+groupId------包名（一般为域名的反写）。
 
+artfactId------项目名。
 
-
-
-
-
-
-
-
-#### exclusions
-
-
-
-
-
-
-
-
-
-
-
-#### artifactId
-
-
+version-------版本。
 
 
 
@@ -847,13 +992,17 @@ public class WebLogAspect {
 
 ### DTO
 
+DTO（Data Transfer Object）：数据传输对象，这个概念来源于J2EE的设计模式，原来的目的是为了EJB的分布式应用提供粗粒度的数据实体，以减少分布式调用的次数，从而提高分布式调用的性能和降低网络负载，但在这里，我泛指用于**展示层与服务层之间的数据传输对象**。
 
+DO（Domain Object）：领域对象，就是从现实世界中抽象出来的有形或无形的**业务实体**。
 
+PO（Persistent Object）：**持久化对象，它跟持久层（通常是关系型数据库）的数据结构形成一一对应的映射关系，如果持久层是关系型数据库，那么，数据表中的每个字段（或若干个）就对应PO的一个（或若干个）属性。**
 
-
-
-
-
+用户发出请求（可能是填写表单），表单的数据在展示层被匹配为VO。
+展示层把VO转换为服务层对应方法所要求的DTO，传送给服务层。
+服务层首先根据DTO的数据构造（或重建）一个DO，调用DO的业务方法完成具体业务。
+服务层把DO转换为持久层对应的PO（可以使用ORM工具，也可以不用），调用持久层的持久化方法，把PO传递给它，完成持久化操作。
+对于一个逆向操作，如读取数据，也是用类似的方式转换和传递。
 
 
 
