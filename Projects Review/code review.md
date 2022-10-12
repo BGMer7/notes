@@ -970,7 +970,7 @@ public void AfterBuying(JoinPoint jp, Object returnValue) throws Throwable {
 
 ## Spring Boot
 
-#### maven
+### maven
 
 groupId，artfactId，version，type，classifier，scope，systemPath，exclusions，optional 是 maven的9种依赖属性，
 
@@ -1003,6 +1003,137 @@ PO（Persistent Object）：**持久化对象，它跟持久层（通常是关�
 服务层首先根据DTO的数据构造（或重建）一个DO，调用DO的业务方法完成具体业务。
 服务层把DO转换为持久层对应的PO（可以使用ORM工具，也可以不用），调用持久层的持久化方法，把PO传递给它，完成持久化操作。
 对于一个逆向操作，如读取数据，也是用类似的方式转换和传递。
+
+
+
+
+
+### Test
+
+Spring Test与JUnit等其他测试框架结合起来，提供了便捷高效的测试手段。而Spring Boot Test 是在Spring Test之上的再次封装，增加了切片测试，增强了mock能力。
+
+整体上，Spring Boot Test支持的测试种类，大致可以分为如下三类：
+
+- 单元测试：一般面向方法，编写一般业务代码时，测试成本较大。涉及到的注解有@Test。
+- 切片测试：一般面向难于测试的边界功能，介于单元测试和功能测试之间。涉及到的注解有@RunWith @WebMvcTest等。
+- 功能测试：一般面向某个完整的业务功能，同时也可以使用切面测试中的mock能力，推荐使用。涉及到的注解有@RunWith @SpringBootTest等。
+
+功能测试过程中的几个关键要素及支撑方式如下：
+
+- 测试运行环境：通过@RunWith 和 @SpringBootTest启动spring容器。
+- mock能力：Mockito提供了强大mock功能。
+- 断言能力：AssertJ、Hamcrest、JsonPath提供了强大的断言能力。
+
+增加spring-boot-starter-test依赖，使用@RunWith和@SpringBootTest注解，即可开始测试。
+
+添加依赖
+
+```xml
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-test</artifactId>
+  <scope>test</scope>
+</dependency>
+```
+
+一旦依赖了spring-boot-starter-test，下面这些类库将被一同依赖进去：
+
+- JUnit：java测试事实上的标准，默认依赖版本是4.12（JUnit5和JUnit4差别比较大，集成方式有不同）。
+- Spring Test & Spring Boot Test：Spring的测试支持。
+- AssertJ：提供了流式的断言方式。
+- Hamcrest：提供了丰富的matcher。
+- Mockito：mock框架，可以按类型创建mock对象，可以根据方法参数指定特定的响应，也支持对于mock调用过程的断言。
+- JSONassert：为JSON提供了断言功能。
+- JsonPath：为JSON提供了XPATH功能。
+
+[SpringBoot Test及注解详解 - codedot - 博客园 (cnblogs.com)](https://www.cnblogs.com/myitnews/p/12330297.html)
+
+
+
+
+
+@SpringBootTest
+
+用来指定SpringBoot应用程序的入口类，该注解默认会根据包名逐级往上找，一直找到一个SpringBoot主程序class为止，然后启动该类为单元测试准备Spring上下文环境。Spring单元测试并不在每个测试方法前都移动一个全新的Spring上下文。因为这样做太耗费时间。而是会缓存上下文环境。如果某个测试方法需要重新准备Spring上下文, 需要在该方法上加 @DirtiesContext 注解。@Test
+
+@Test
+
+JUnit在执行每个测试方法之前, 都会为测试类创建一个新的实例, 这样有助于隔离各个测试方法之前的相互影响
+
+@RunWith
+
+1. 表示JUnit将调用它所引用的类来运行该类中的测试而不是开发者去在junit内部去构建它
+2. spring系列框架中单元测试**必须要通过此注解使用spring运行器运行单元测试，否则，自动注入会失效**
+
+
+
+**SpringJUnit4ClassRunner**
+
+SpringRunner单纯只是简化了SpringJUnit4ClassRunner 写法
+
+而SpringJUnit4ClassRunner 是在junit默认运行器的基础上进行了封装
+
+
+
+**@Before、@After、@Test、@BeforeClass、@AfterClass**
+
+- @BeforeClass – 表示在类中的任意public static void方法执行之前执行
+- @AfterClass – 表示在类中的任意public static void方法执行之后执行
+- @Before – 表示在任意使用@Test注解标注的public void方法执行之前执行
+- @After – 表示在任意使用@Test注解标注的public void方法执行之后执行
+- @Test – 使用该注解标注的public void方法会表示为一个测试方法
+
+
+
+#### BeanFactory
+
+通常来说，spring中的bean的意义就是被spring容器管理的spring对象。
+
+spring容器负责实例化、配置和组装spring bean。
+
+
+
+### context
+
+BeanFactory和ApplicationContext的区别：
+
+通常来说，使用getBean()来直接调用这个bean，最常用的两个实现类是BeanFactory和XmlBeanFactory
+
+```java
+package com.zoltanraffai;  
+
+import org.springframework.core.io.ClassPathResource;  
+import org.springframework.beans.factory.InitializingBean; 
+import org.springframework.beans.factory.xml.XmlBeanFactory; 
+
+public class HelloWorldApp{ 
+   public static void main(String[] args) { 
+      XmlBeanFactory factory = new XmlBeanFactory (new ClassPathResource("beans.xml")); 
+      HelloWorld obj = (HelloWorld) factory.getBean("helloWorld");    
+      obj.getMessage();    
+   }
+}
+```
+
+ApplicationContext是通过配置信息提供给application的spring项目的核心接口，它实现了BeanFactory接口，所以实现了所有BeanFactory的方法，ApplicationContext主要用于支持大规模的应用。 
+
+```java
+package com.zoltanraffai;  
+
+import org.springframework.core.io.ClassPathResource;  
+import org.springframework.beans.factory.InitializingBean; 
+import org.springframework.beans.factory.xml.XmlBeanFactory; 
+
+public class HelloWorldApp{ 
+   public static void main(String[] args) { 
+      ApplicationContext context=new ClassPathXmlApplicationContext("beans.xml"); 
+      HelloWorld obj = (HelloWorld) context.getBean("helloWorld");    
+      obj.getMessage();    
+   }
+}
+```
+
+
 
 
 
