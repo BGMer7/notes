@@ -111,6 +111,14 @@ System.out.println(nsddStr);
 
 
 
+### enum
+
+
+
+
+
+
+
 ### Java cmd
 
 Java的入口是main方法，main方法接受一个命令行参数，这个参数的格式是字符串数组。
@@ -608,6 +616,39 @@ public class MyAbstract {
 ```
 
 **通俗一点，抽象方法就是，这个方法我实现不了，也不应该由我来实现，但是子类，你记得实现。你不实现你没法编译。---个人归纳。**
+
+
+
+### Abstract + AOP
+
+```java
+@Slf4j
+@Aspect
+@Component("abstract_service_aspect")
+public class AbstractServiceAspect {
+    @Pointcut("execution(* com.gatsby.abstractclass.AbstractService.getRawServiceCode())")
+    public void getRawAbstractServiceCode() {
+        log.info("This is an abstract aop point cut");
+    }
+
+    @Before("getRawAbstractServiceCode()")
+    public void printRawCodeInAbstractService() {
+        System.out.println(this.getClass());
+        System.out.println("before, this is a abstract aop");
+    }
+
+    @AfterReturning(value = "getRawAbstractServiceCode()", returning = "returnValue")
+    public void printRawCodeInAbstractService(JoinPoint jp, Object returnValue) {
+        // getSignature用于获取代理类和被代理类的信息
+        String name = jp.getSignature().getName();
+        System.out.println(name);
+        String res = returnValue.toString();
+        System.out.println(res);
+    }
+}
+```
+
+
 
 
 
@@ -5983,7 +6024,7 @@ i=2 -> h = 31 * (31 * (31 * 0 + val[0]) + val[1]) + val[2]
 >    ```
 >    Prime numbers are chosen to best distribute data among hash buckets.  
 >    If the distribution of inputs is random and evenly spread, then the  choice of the hash code/modulus does not matter. It only has an impact  when there is a certain pattern to the inputs.
->                                                 
+>                                                       
 >    This is often the case when dealing with memory locations. 
 >    For  example, all 32-bit integers are aligned to addresses divisible by 4.  
 >    Check out the table below to visualize the effects of using a prime vs.  non-prime modulus:
