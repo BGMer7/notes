@@ -1548,11 +1548,52 @@ public class EmployeeRedisController {
 
 
 
+### Redis实现PV UV统计
+
+在redis的hash中，hash类型指的是redis的键值对中的值又是一个键值对，也即：value=[{field1，value1}，...{fieldN，valueN}]，其与Redis字符串对象的区别如下图所示
+
+![Redis-Hash](https://hunter-image.oss-cn-beijing.aliyuncs.com/redis/%E5%AF%B9%E8%B1%A1%E7%AF%87/%E5%93%88%E5%B8%8C/Redis-Hash.png)
+
+redis的哈希类型主要有几种命令：
+
+| 命令                                                         | 说明                               | 时间复杂度                 |
+| ------------------------------------------------------------ | ---------------------------------- | -------------------------- |
+| [DEL key field [field ...\]](http://blog.laoyu.site/2020/redis_command/hash/hdel/) | 删除一个或多个Hash的field          | O(N) N是被删除的字段数量。 |
+| [HEXISTS key field](http://blog.laoyu.site/2020/redis_command/hash/hexists/) | 判断field是否存在于hash中          | O(1)                       |
+| [HGET key field](http://blog.laoyu.site/2020/redis_command/hash/hget/) | 获取hash中field的值                | O(1)                       |
+| [HGETALL key](http://blog.laoyu.site/2020/redis_command/hash/hgetall/) | 从hash中读取全部的域和值           | O(N) N是Hash的长度         |
+| [HINCRBYFLOAT key field increment](http://blog.laoyu.site/2020/redis_command/hash/hincrbyfloat/) | 将hash中指定域的值增加给定的浮点数 | O(1)                       |
+| [HKEYS key](http://blog.laoyu.site/2020/redis_command/hash/hkeys/) | 获取hash的所有字段                 | O(N) N是Hash的长度         |
+| [HLEN key](http://blog.laoyu.site/2020/redis_command/hash/hlen/) | 获取hash里所有字段的数量           | O(1)                       |
+| [HMGET key field [field ...\]](http://blog.laoyu.site/2020/redis_command/hash/hmget/) | 获取hash里面指定字段的值           | O(N) N是请求的字段数       |
+| [HMSET key field value [field value ...\]](http://blog.laoyu.site/2020/redis_command/hash/hmset/) | 设置hash字段值                     | O(N) N是设置的字段数       |
+| [HSET key field value](http://blog.laoyu.site/2020/redis_command/hash/hset/) | 设置hash里面一个字段的值           | O(1)                       |
 
 
 
+```java 
+/**
+     * 统计pv uv，可做定时任务，每晚0点更新到DB里
+     * @return
+     */
+public String dataStatistics(Long channelId){
+    /*缓存key*/
+    String key = "CHANNEL_DATA_CACHE_KEY_" + channelId;
 
+    /*uv*/
+    Long uvToday = redisClient.hlen(key);
 
+    /*pv*/
+    List<String> hvals = redisClient.hvals(key);
+    Long pvToday = 0L;
+    for (String str : hvals) {
+        pvToday += Long.valueOf(str);
+    }
+    return "ok";
+}
+```
+
+如果每次累加的话，可能需要O(N)级别的遍历，可以另外增加一个key为page_view，每次uv加1的时候，将这个字段也同样加1，这样获取pv数量就不需要累加，而是O(1)级别的直接获取这个字段对应的数值。
 
 
 
