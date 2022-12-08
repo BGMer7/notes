@@ -705,11 +705,66 @@ explain select * from user where userid =10086 or age =18;
 
 
 
+### MySQL中的日期查询
 
 
 
+MYsql 针对where条件时间范围的查询效率方式对比
 
+end_rec表，游戏记录表 时间字段 time_str 表示每局游戏结束时间，已经针对 time_str加了 B-tree 索引，一共68w条数据
 
+需求：
+
+查询今日的组局数量
+
+1. 方式一，用 TO_DAYS() 函数
+
+   ```sql
+   select count(*) from end_rec where TO_DAYS(time_str) = TO_DAYS(NOW());
+   ```
+
+   耗时 0.15 sec
+
+2. 方式二，用date_format 函数
+
+   ```sql
+   select count(*) from end_rec where date_format(time_str,'%Y%m%d')='20200229';
+   ```
+
+   耗时0.27sec
+
+3. 方式三，用 > < 查询当天时间范围
+
+   ```sql
+   select count(*) from end_rec where time_str >= '2020-02-29' AND time_str <='2020-03-01';
+   ```
+
+   耗时0.02 sec 查询非常快
+
+4. 方式四，用 SUBSTING函数
+
+   ```sql
+   select count(*) from end_rec where SUBSTRING(time_str,1,10)='2020-02-29';
+   ```
+
+   耗时 0.22秒基本和方式二差不多。
+
+5. 方式五，用 between and 语句
+
+   耗时0.02秒，非常快。 发现 between and 语句非常高效 和 方式3一样。
+
+6. 方式六， 用UNIX_TIMESTAMP转换时间字符串为时间戳后查询
+
+   2020-02-29 时间戳对应 1582904600
+
+   2020-03-01 时间戳对应 1582992000;
+
+   SQL语句：
+
+   select count(*) from end_rec where UNIX_TIMESTAMP(time_str) > 1582904600 AND UNIX_TIMESTAMP(time_str) < 1582992000;耗时达到了惊人的 0.99，是方式3和方式5的接近一百倍。这个方式是性能最差的查询方案。
+
+   总结，对有关时间范围的SQL查询，最好使用between AND, 或者 >, < 的在一个时间范围类的方式，这样可以有效利用索引。其他方式会使查询索引失效。
+   
 
 
 
