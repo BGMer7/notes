@@ -1339,6 +1339,67 @@ I/O size (minimum/optimal): 512 bytes / 512 bytes
 
 
 
+### Linux mount & umount
+
+Linux中的根目录以外的文件要想被访问，需要将其“关联”到根目录下的某个目录来实现，这种关联操作就是“挂载”，这个目录就是“挂载点”，解除次关联关系的过程称之为“卸载”。
+
+注意：“挂载点”的目录需要以下几个要求：
+
+（1）目录事先存在，可以用mkdir命令新建目录；
+
+（2）挂载点目录不可被其他进程使用到；
+
+（3）挂载点下原有文件将被隐藏。
+
+以NFS的挂载为实例，挂载空目录和非空目录
+
+空目录：
+
+```shell
+[root@localhost nfs]# mount 172.50.1.88:/data/nfs /data/nfs
+```
+
+已经挂载上了172.50.1.88:/data/nfs，umount只需要
+
+```shell
+umount -v /data/nfs
+```
+
+
+
+非空目录：
+
+```shell
+[root@localhost nfs]# mount 172.50.1.88:/data/nfs /data/nfs1
+```
+
+原有的文件将被覆盖
+
+此时我们只需要解挂：
+
+```shell
+umount -v /data/nfs
+```
+
+也可以省略挂载点，直接写成:
+
+```typescript
+# umount /dev/sdb
+```
+
+解挂后，操作系统指向的地址改变了，原来的文件又能看见了。
+
+如果设备正忙，卸载即告失败。卸载失败的常见原因是，某个打开的shell当前目录为挂载点里的某个目录，退出当前目录即可。
+
+```shell
+[root@localhost nfs]# umount 172.50.1.88:/data/nfs
+umount.nfs4: /data/nfs: device is busy
+```
+
+
+
+
+
 ### Linux防火墙
 
 查看防火墙状态：systemctl status firewalld
