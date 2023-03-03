@@ -21,6 +21,69 @@ maven选择：
 
 
 
+### Database
+
+**在初始化阶段查询数据库，并将数据库返回的数据加载到环境变量中。**
+
+```java 
+package com.tzt;
+
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.MutablePropertySources;
+import org.springframework.core.env.PropertySource;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+
+/**
+ * @classname ApplicationContextInitializer
+ * @description:
+ * @author: caijinyang
+ * @create: 2023/2/23
+ **/
+
+public class ApplicationContextInitializer implements org.springframework.context.ApplicationContextInitializer<ConfigurableApplicationContext> {
+
+    @Override
+    public void initialize(ConfigurableApplicationContext applicationContext) {
+        // Perform the database query here and store the result in a property
+        // that can be used by your Spring beans later
+        DriverManagerDataSource dataSource = new DriverManagerDataSource();
+        Environment environment = applicationContext.getEnvironment();
+        dataSource.setDriverClassName(environment.getProperty("spring.datasource.driver-class-name"));
+        dataSource.setUrl(environment.getProperty("spring.datasource.url"));
+        dataSource.setUsername(environment.getProperty("spring.datasource.username"));
+        dataSource.setPassword(environment.getProperty("spring.datasource.password"));
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+        String sql = "SELECT value FROM `system_set_info` WHERE field_key = \"fileUploadMode\"";
+        String fileUploadMode = jdbcTemplate.queryForObject(sql, String.class);
+        System.out.println(fileUploadMode);
+
+        // Store the result in the ApplicationContext
+        MutablePropertySources propertySources = applicationContext.getEnvironment().getPropertySources();
+        propertySources.addLast(new PropertySource<String>("fileUploadMode") {
+            @Override
+            public String getProperty(String name) {
+                if ("fileUploadMode".equals(name)) {
+                    return fileUploadMode;
+                }
+                return null;
+            }
+        });
+    }
+}
+
+
+```
+
+
+
+### 
+
+
+
+
+
 ## structure
 
 代码层的结构：
@@ -94,15 +157,67 @@ Dao层主要是和数据库进行交互，使用SQL语句向数据库发送命�
 
 
 
+## Bean
+
+### Spring bean
+
+传统的Java Bean有以下一些规范：
+
+1. 这个类有一个public的无参构造方法
+2. 这个类的所有属性都是private
+3. private的属性通过setter和getter暴露给外界，并且方法的命名也必须遵守一些命名规范
+4. 这个类应该是可序列化的（实现Serializable）
+
+传统的Bean更多用于值传递参数
+
+普通Java对象和Spring所管理的Bean实例化的过程是有些区别的，在普通Java环境下创建对象的简要步骤可以分为以下步骤：
+
+1. Java源码被编译为class文件
+2. 等到类被需要初始化时候（new或者反射等）
+3. class文件被虚拟机装载到JVM，这一步骤由类加载器完成
+4. 初始化对象供后续代码使用
+
+简单来说，可以理解为用Class对象作为模板进而创建出具体的实例
+
+<img src="https://pic1.zhimg.com/80/v2-b785bf02600169adb09738b87d092afc_720w.webp?source=1940ef5c" alt="img" style="zoom:50%;" />
+
+**而Spring管理的Bean不同的是，除了class对象之外，还会使用BeanDefinition的实例来描述对象的信息，例如我们可以在spring所管理的Bean有一系列的描述，@Scope、@Lazy、@DependsOn等等，可以理解为：Class只描述了类的信息，而BeanDefinition描述了对象的信息。**
+
+
+
+Spring在启动是需要扫描在xml、注解、JavaConfig中需要被Spring管理的Bean信息，随后将这些信息封装成BeanDefinition，最后把这个信息放到一个beanDefinitionMap中。这个map的key是beanName，value是BeanDefinition对象。到这里只是将所有定义的元数据加载起来，目前真实的对象还没有实例化。
+
+
+
+接下来开始遍历beanDefinitionMap，执行BeanFactoryPostProcessor这个Bean工厂后置处理器的逻辑，比如说，我们平时定义的占位符信息，就是通过BeanFactoryPostProcessor的子类PropertyPlaceholderConfigurer进行注入进去。
+
+<img src="https://pica.zhimg.com/v2-3247d0086217d6c2e5013f809210bd12_r.jpg?source=1940ef5c" alt="img" style="zoom:50%;" />
+
+BeanFactoryPostProcessor后置处理结束之后，就到了实例化对象的步骤，在Spring里通过反射来实现这个步骤，一般来说使用合适的构造器来把对象实例化。**但是此时的实例化，只是创建了一个对象，还没有将对象的属性注入**。比如我的对象是UserService，而UserService对象依赖着SendService对象，这时候的SendService还是null的。
+
+我们这边会抽取成一个工具类，去实现ApplicationContextAware接口，来获取ApplicationContext对象进而获取Spring Bean，Aware相关的接口处理完之后，就会到BeanPostProcessor后置处理器。
 
 
 
 
 
+### Aware interface
+
+> Spring中提供了广泛的Aware回调接口，让bean向容器表明它们需要某种基础设施依赖。
+
+```java
+public interface Aware {
+    
+}
+```
+
+Aware接口没有定义任何方法，所以这是一个标识接口。
 
 
 
 
+
+### autowired
 
 
 
@@ -625,6 +740,36 @@ class LibraryProperties {
 
 
 
+### @Conditional
+
+@Conditional是Spring4新提供的注解，它的作用是按照一定的条件进行判断，满足条件给容器注册bean。
+
+@Conditional的定义：
+
+```java
+//此注解可以标注在类和方法上
+@Target({ElementType.TYPE, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME) 
+@Documented
+public @interface Conditional {
+    Class<? extends Condition>[] value();
+}
+```
+
+从代码中可以看到，需要传入一个Class数组，并且需要继承Condition接口：
+
+```java
+public interface Condition {
+    boolean matches(ConditionContext var1, AnnotatedTypeMetadata var2);
+}
+```
+
+Condition是个接口，需要实现matches方法，返回true则注入bean，false则不注入。
+
+
+
+
+
 
 
 ### integration
@@ -817,6 +962,12 @@ public void delete() {
     restTemplate.delete("http://HELLO-SERVICE/getbook4/{1}", 100);
 }
 ```
+
+
+
+#### 
+
+
 
 
 
@@ -1025,6 +1176,26 @@ MyBatis在操作数据库的时候，大体经历8个步骤：
 例如可以将事务文件放在application-transaction.properties中，将数据源放在application-db.properties中，这样一来，加载xml的时候，只需要通过application*.properties的方式就可以将所有的配置文件都导入进来。
 
 
+
+### cache
+
+1. mybatis-config.xml
+
+   ```xml
+   <settings>
+   <!--因为cacheEnabled的取值默认就为true，所以这一步可以省略不配置。
+   为true代表开启二级缓存；为false代表不开启二级缓存。-->
+   <setting name="cacheEnabled" value="true"/>
+   </settings>
+   ```
+
+2. Mapper上加上@CacheNamespace
+
+3. 在mapper.xml的namespace下加上
+
+   ```xml
+       <cache eviction="LRU" flushInterval="180000" size="1024" readOnly="true"/>
+   ```
 
 
 
@@ -1274,6 +1445,18 @@ public Result test() throws Exception{
     return ResultUtil.success(str);
 }
 ```
+
+
+
+### VO、DTO、DO、PO
+
+<img src="https://pic1.zhimg.com/v2-24e3ed681c02b6434681719753c53b40_r.jpg" alt="img" style="zoom: 67%;" />
+
+DTO
+
+
+
+
 
 
 

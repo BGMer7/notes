@@ -133,23 +133,23 @@ $ yum install nfs*
 
 NFS配置及使用
 
-我们在服务端创建一个共享目录 `/data/share` ，作为客户端挂载的远端入口，然后设置权限。
+我们在服务端创建一个共享目录 `/data/nfs` ，作为客户端挂载的远端入口，然后设置权限。
 
 ```shell
-$ mkdir -p /data/share
-$ chmod 666 /data/share
+$ mkdir -p /data/nfs
+$ chmod 666 /data/nfs
 ```
 
 然后，修改 NFS 配置文件 `/etc/exports`
 
 ```shell
 $ vim /etc/exports
-/data/share 10.222.77.0/24(rw,sync,insecure,no_subtree_check,no_root_squash)
+/data/nfs 10.222.77.0/24(rw,sync,insecure,no_subtree_check,no_root_squash)
 ```
 
-说明一下，这里配置后边有很多参数，每个参数有不同的含义，具体可以参考下边。此处，我配置了将 `/data/share` 文件目录设置为允许 IP 为该 `10.222.77.0/24` 区间的客户端挂载，当然，如果客户端 IP 不在该区间也想要挂载的话，可以设置 IP 区间更大或者设置为 `*` 即允许所有客户端挂载，例如：`/home *(ro,sync,insecure,no_root_squash)` 设置 `/home` 目录允许所有客户端只读挂载。
+说明一下，这里配置后边有很多参数，每个参数有不同的含义，具体可以参考下边。此处，我配置了将 `/data/nfs` 文件目录设置为允许 IP 为该 `10.222.77.0/24` 区间的客户端挂载，当然，如果客户端 IP 不在该区间也想要挂载的话，可以设置 IP 区间更大或者设置为 `*` 即允许所有客户端挂载，例如：`/home *(ro,sync,insecure,no_root_squash)` 设置 `/home` 目录允许所有客户端只读挂载。
 
-说明一下，这里配置后边有很多参数，每个参数有不同的含义，具体可以参考下边。此处，我配置了将 `/data/share` 文件目录设置为允许 IP 为该 `10.222.77.0/24` 区间的客户端挂载，当然，如果客户端 IP 不在该区间也想要挂载的话，可以设置 IP 区间更大或者设置为 `*` 即允许所有客户端挂载，例如：`/home *(ro,sync,insecure,no_root_squash)` 设置 `/home` 目录允许所有客户端只读挂载。
+说明一下，这里配置后边有很多参数，每个参数有不同的含义，具体可以参考下边。此处，我配置了将 `/data/nfs` 文件目录设置为允许 IP 为该 `10.222.77.0/24` 区间的客户端挂载，当然，如果客户端 IP 不在该区间也想要挂载的话，可以设置 IP 区间更大或者设置为 `*` 即允许所有客户端挂载，例如：`/home *(ro,sync,insecure,no_root_squash)` 设置 `/home` 目录允许所有客户端只读挂载。
 
 | 参数             | 说明                                                         |
 | :--------------- | :----------------------------------------------------------- |
@@ -232,36 +232,36 @@ $ service nfs start
 我们发现，启动了 NFS 服务后，rpc 注册的端口列表明显增多。OK 现在服务端都启动起来了，在服务端看下是否正确加载了设置的 `/etc/exports` 配置。
 
 ```shell
-$ showmount -e localhost
+[root@s88 userfiles]# showmount -e localhost
 Export list for localhost:
-/data/share 10.222.77.0/24
+/data/nfs 172.50.1.159/24
 ```
 
 最后，在另一台 Linux 虚拟机上测试一下，是否能够正确挂载吧。首先，我们可以在客户端查看下 NFS 服务端 (上边服务端 IP 为：10.222.77.86) 设置可共享的目录信息。
 
 ```shell
-# showmount -e 10.222.77.86
-Export list for 10.222.77.86:
-/data/share 10.222.77.0/24
+# showmount -e 172.50.1.88
+Export list for 172.50.1.88:
+/data/nfs 172.50.1.159/24
 ```
 
-然后，在客户端创建挂在目录 `/share`
+然后，在客户端创建挂在目录 `/data/nfs`
 
 ```shell
-$ mount 10.222.77.86:/data/share /share
-$ df -h | grep 10.222.77.86
+$ mount 172.50.1.88:/data/nfs /data/nfs
+$ df -h | grep 172.50.1.88
 Filesystem                 Size  Used  Avail Use% Mounted on
-10.222.77.86:/data/share   27G   11G   17G   40%  /share
+172.50.1.88:/data/nfs   27G   11G   17G   40%  /data/nfs
 ```
 
-可以看到，可以正确将远端 NFS 目录挂载到本地。注意：挂载点 `/share` 目录必须已经存在，而且目录中没有文件或子目录。
+可以看到，可以正确将远端 NFS 目录挂载到本地。注意：挂载点 `/nfs` 目录必须已经存在，而且目录中没有文件或子目录。
 
-最后，我们在 NFS 服务端 `/data/share` 目录下创建一个文件，看下客户端是否能够正确读取并修改。
+最后，我们在 NFS 服务端 `/data/nfs` 目录下创建一个文件，看下客户端是否能够正确读取并修改。
 
 ```shell
 # 服务端写入
-$ echo "This is NFS server." > /data/share/nfs.txt
-# ll /data/share/
+$ echo "This is NFS server." > /data/nfs/nfs.txt
+# ll /data/nfs/
 total 4
 -rw-r--r-- 1 root root 20 Nov  5 16:49 nfs.txt
 
@@ -276,7 +276,7 @@ This is NFS server.
 $ echo "This is NFS client." >> /share/nfs.txt
 
 # 服务端读取
-$ cat /data/share/nfs.txt
+$ cat /data/nfs/nfs.txt
 This is NFS server.
 This is NFS client.
 ```
