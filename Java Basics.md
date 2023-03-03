@@ -518,6 +518,157 @@ staff[0].setBonus(1000);
 
 
 
+#### extends & combines
+
+面向对象编程中，有一条非常经典的设计原则，那就是组合优先于继承，多用组合，少用继承。
+
+在《阿里巴巴Java开发手册》中有一条规定：**谨慎使用继承的方式进行扩展，优先使用组合的方式实现。**如果不得已的话，必须符合里氏代换法则。
+
+>里氏代换原则（Liskov Substitution Principle，LSP）是面向对象编程中的一个重要原则，由Barbara Liskov和Jeannette Wing在1987年提出。该原则表述如下：
+>
+>“如果对于每一个类型为S的对象o1，都有类型为T的对象o2，使得以T定义的所有程序P在所有的对象o1都代换成o2时，程序P的行为没有发生变化，那么类型S是类型T的子类型。”
+>
+>简单来说，LSP原则要求子类对象必须能够替换掉其父类对象，并且程序逻辑不会发生错误或者异常。也就是说，子类对象在运行时必须能够完全替代父类对象的行为。
+>
+>该原则是开闭原则的具体实现，它使得程序的扩展更加容易，可以增加新的子类，也可以通过重写父类方法来实现新的功能，同时也保证了程序的健壮性和可维护性。
+
+[在设计原则中，为什么反复强调组合要优于继承？ - Kevin.ZhangCG - 博客园 (cnblogs.com)](https://www.cnblogs.com/Kevin-ZhangCG/p/14892610.html)
+
+继承是面向对象的四大特性之一，用来表示类之间的is-a关系，可以解决代码复用的问题。虽然继承有诸多作用，但继承层次过深、过复杂，也会影响到代码的可维护性。
+
+
+
+假设我们要设计一个关于鸟的类。我们将“鸟”这样一个抽象的事物概念，定义为一个抽象类AbstractBird。所有更细分的鸟，比如麻雀、鸽子、乌鸦等，都继承这个抽象类。我们知道，大部分鸟都会飞，那我们可不可以在 AbstractBird抽象类中，定义一个fly()方法呢？
+
+答案是否定的。尽管大部分鸟都会飞，但也有特例，比如鸵鸟就不会飞。鸵鸟继承具有fly()方法的父类，那鸵鸟就具有“飞”这样的行为，这显然不对。如果在鸵鸟这个子类中重写fly() 方法，让它抛出UnSupportedMethodException异常呢？
+
+这种写法虽然可以解决问题，但不优雅。因为除了鸵鸟之外，不会飞的鸟还有很多，比如企鹅。对于这些不会飞的鸟来说，全部都去重写fly()方法，抛出异常，完全属于代码重复。理论上这些不会飞的鸟根本就不应该拥有fly()方法，让不会飞的鸟暴露fly()接口给外部，增加了被误用的概率。
+
+要解决上面的问题，就得让AbstractBird类派生出两个更加细分的抽象类：会飞的鸟类AbstractFlyableBird和不会飞的鸟类AbstractUnFlyableBird，让麻雀、乌鸦这些会飞的鸟都继承 AbstractFlyableBird，让鸵鸟、企鹅这些不会飞的鸟，都继承 AbstractUnFlyableBird 类。
+
+这样一来，继承关系变成了三层。但是如果我们不只关注“鸟会不会飞”，还要继续关注“鸟会不会叫”，将鸟划分得更加细致时呢？两个关注行为自由搭配起来会产生四种情况：会飞会叫、不会飞会叫、会飞不会叫、不会飞不会叫。如果继续沿用刚才的设计思路，继承层次会再次加深。
+
+如果继续增加“鸟会不会下蛋”这样的行为，类的继承层次会越来越深、继承关系会越来越复杂。而这种层次很深、很复杂的继承关系，一方面，会导致代码的可读性变差。因为我们要搞清楚某个类具有哪些方法、属性，必须阅读父类的代码、父类的父类的代码……一直追溯到最顶层父类的代码。另一方面，这也破坏了类的封装特性，将父类的实现细节暴露给了子类。子类的实现依赖父类的实现，两者高度耦合，一旦父类代码修改，就会影响所有子类的逻辑。
+
+继承最大的问题就在于：**继承层次过深、继承关系过于复杂时会影响到代码的可读性和可维护性。**
+
+
+
+**组合相比继承有哪些优势**
+
+复用性是面向对象技术带来的很棒的潜在好处之一。如果运用的好的话可以帮助我们节省很多开发时间，提升开发效率。但是，如果被滥用那么就可能产生很多难以维护的代码。作为一门面向对象开发的语言，代码复用是Java引人注意的功能之一。Java代码的复用有继承、组合以及委托三种具体的实现形式。
+
+对于上面提到的继承带来的问题，可以利用组合（composition）、接口、委托（delegation）三个技术手段一块儿来解决。
+
+接口表示具有某种行为特性。针对“会飞”这样一个行为特性，我们可以定义一个Flyable接口，只让会飞的鸟去实现这个接口。对于会叫、会下蛋这些行为特性，我们可以类似地定义Tweetable接口、EggLayable接口。
+
+```java 
+public interface Flyable {
+  void fly();
+}
+public interface Tweetable {
+  void tweet();
+}
+public interface EggLayable {
+  void layEgg();
+}
+public class Ostrich implements Tweetable, EggLayable {//鸵鸟
+  //... 省略其他属性和方法...
+  @Override
+  public void tweet() { //... }
+  @Override
+  public void layEgg() { //... }
+}
+public class Sparrow implements Flayable, Tweetable, EggLayable {//麻雀
+  //... 省略其他属性和方法...
+  @Override
+  public void fly() { //... }
+  @Override
+  public void tweet() { //... }
+  @Override
+  public void layEgg() { //... }
+}
+```
+
+
+
+不过，接口只声明方法，不定义实现。也就是说，**每个会下蛋的鸟都要实现一遍layEgg()方法，并且实现逻辑几乎是一样的（可能极少场景下会不一样），这就会导致代码重复的问题。那这个问题又该如何解决呢？有以下两种方法。**
+
+1. 使用委托：针对三个接口再定义3个类，它们分别是：实现了fly()方法的 FlyAbility类、实现了tweet()方法的TweetAbility类、实现了layEgg()方法的 EggLayAbility类。然后，通过组合和委托技术来消除代码重复。
+
+   ```java
+   public interface Flyable {
+     void fly()；
+   }
+   public class FlyAbility implements Flyable {
+     @Override
+     public void fly() { //... }
+   }
+   //省略Tweetable/TweetAbility/EggLayable/EggLayAbility
+   
+   public class Ostrich implements Tweetable, EggLayable {//鸵鸟
+     private TweetAbility tweetAbility = new TweetAbility(); //组合
+     private EggLayAbility eggLayAbility = new EggLayAbility(); //组合
+     //... 省略其他属性和方法...
+     @Override
+     public void tweet() {
+       tweetAbility.tweet(); // 委托
+     }
+     @Override
+     public void layEgg() {
+       eggLayAbility.layEgg(); // 委托
+     }
+   }
+   ```
+
+2. 使用Java 8的接口默认方法
+
+   在Java8中，我们可以在接口中写默认实现方法。使用关键字default定义默认接口实现，当然这个默认的方法也可以重写。
+
+   ```java 
+   public interface Flyable {
+     default void fly() {
+       //默认实现... 
+     }
+   }
+   
+   
+   public interface Flyable {
+     default void fly() {
+       //默认实现... 
+     }
+   }
+   
+   public interface Tweetable {
+     default void tweet() {
+       //默认实现... 
+     }
+   }
+   
+   public interface EggLayable {
+     default void layEgg() {
+       //默认实现... 
+     }
+   }
+   
+   public class Ostrich implements Tweetable, EggLayable {//鸵鸟
+     //... 省略其他属性和方法...
+   }
+   public class Sparrow implements Flayable, Tweetable, EggLayable {//麻雀
+     //... 省略其他属性和方法...
+   }
+   ```
+
+   
+
+3. 
+
+
+
+
+
+
+
 ### Abstract
 
 由于多态的存在，所以每一个子类都可以覆写父类的方法。
@@ -619,7 +770,7 @@ public class MyAbstract {
 
 
 
-### Abstract + AOP
+#### Abstract + AOP
 
 ```java
 @Slf4j
@@ -650,9 +801,35 @@ public class AbstractServiceAspect {
 
 
 
+#### AbstractClass & Interface
+
+对于抽象类的定义为：包含抽象方法的类就是抽象类，因此，abstract class也是class，内部可以包含普通方法和属性，甚至是构造方法。
+
+1. 但是抽象类不能实例化。
+2. 抽象方法不能是private，因为抽象方法需要子类实现，所以至少是protected，默认是public。
+3. 抽象方法不能被final和static修饰，因为抽象方法需要被子类重写。
+4. 抽象类必须被继承， 并且子类继承之后要重写父类的方法， 否则子类仍然是一个抽象类，必须使用abstract关键词修饰。
+
+> 但普通的类也可以被继承, 普通的方法也可以被重写, 为什么非得用抽象类和抽象方法呢?
+>
+> 确实如此. 但是使用抽象类相当于多了一重编译器的校验. 使用抽象类的场景就如上面的代码, 实际工作不应该由父类完成, 而应由子类完成. 那么此时如果不小心误用成父类了, 使用普通类编译器是不会报错的. 但是父类是抽象类就会在实例化的时候提示错误, 让我们尽早发现问题
+>
+> 很多语法存在的意义都是为了 "预防出错", 例如我们曾经用过的 final 也是类似. 创建的变量用户不去修改, 不就相当于常量嘛? 但是加上 final 能够在不小心误修改的时候, 让编译器及时提醒我们.
+>
+> 充分利用编译器的校验, 在实际开发中是非常有意义的.
+>
+> 
+>
+> 作者：凌海儿
+> 链接：https://juejin.cn/post/7197986984970879031
+> 来源：稀土掘金
+> 著作权归作者所有。商业转载请联系作者获得授权，非商业转载请注明出处。
 
 
-### interface
+
+
+
+#### interface
 
 所谓interface，就是比抽象类还要抽象的类，纯粹就是一个抽象接口，连字段也没有。因为所有的接口的定义都是默认public abstract，所以这两个修饰符一般不需要写出，写了和没写作用是一样的。
 
@@ -713,8 +890,16 @@ interface和abstract class的区别：
 3. 抽象类和接口都是不能实例化的，但是都可以通过多态的机制通过子类来实现。
 4. 接口可以继承接口，可以单继承也可以多继承，抽象类只能单继承。
 5. 接口只能继承接口， 抽象类可以继承抽象类也可以继承普通类。
+6. Java类不支持多继承，但是一个类可以实现多个接口。
+7. Java中类和类是单继承的，但是接口和接口之间可以多继承，用接口可以达到多继承的目的。接口与接口之间的继承使用extends关键字。
 
 
+
+抽象类和接口的核心区别在于：抽象类中可以包含普通方法和普通字段，这样的普通方法和字段可以被子类直接使用（不必重写），而接口中不能包含普通方法，子类必须重写所有的抽象方法。
+
+如果有一些默认的方法实现，那么就是用抽象类。如果需要多重继承，那么只能选用接口方式。
+
+抽象类存在的意义是为了让编译器更好地校验。
 
 
 
@@ -6301,7 +6486,7 @@ i=2 -> h = 31 * (31 * (31 * 0 + val[0]) + val[1]) + val[2]
 >    ```
 >    Prime numbers are chosen to best distribute data among hash buckets.  
 >    If the distribution of inputs is random and evenly spread, then the  choice of the hash code/modulus does not matter. It only has an impact  when there is a certain pattern to the inputs.
->                                                          
+>                                                             
 >    This is often the case when dealing with memory locations. 
 >    For  example, all 32-bit integers are aligned to addresses divisible by 4.  
 >    Check out the table below to visualize the effects of using a prime vs.  non-prime modulus:
