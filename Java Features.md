@@ -482,3 +482,102 @@ Lambda 的语法特性。
 
 
 
+### Comparator Sort
+
+#### Comparator
+
+Comparator 是 Java 8 之前常用的排序方式，下面是排序 Person 类中的 `age` 字段的示例。
+
+```java
+public static void main(String[] args) {
+    List<Person> list = new ArrayList<>();
+    list.add(new Person("Chris", 20));
+    list.add(new Person("Linda", 10));
+    list.add(new Person("Jack", 30));
+    Collections.sort(list, new Comparator<Person>() {
+    		@Override
+    		public int compare(Person o1, Person o2) {
+    		    return o1.getAge() - o2.getAge();
+    		}
+		});
+    for (Person person : list) {
+        System.out.println(person);
+    }
+}
+```
+
+输出：
+
+```text
+Person{name='Linda', age=10}
+Person{name='Chris', age=20}
+Person{name='Jack', age=30}
+```
+
+这里是一个匿名内部类方式的实现，为了一行排序代码写的代码是不是有点多了？
+
+#### Comparator+Lambda+Stream
+
+```java
+package com.gatsby;
+
+import lombok.Data;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
+/**
+ * @author caijinyang
+ * @classname ComparatorTest
+ * @description
+ * @date 2023/4/3
+ **/
+
+public class ComparatorTest {
+    @Data
+    public static class Person {
+        private String name;
+        private Integer age;
+
+        public Person(String name, Integer age) {
+            this.name = name;
+            this.age = age;
+        }
+    }
+
+
+    private static void testComparatorAndLambda(List<Person> list) {
+        Comparator<Person> comparator = (Person p1, Person p2) -> p2.getAge().compareTo(p1.getAge());
+        list.sort(comparator);
+        list.forEach(System.out::println);
+        list.sort(comparator.reversed());
+        list.forEach(System.out::println);
+    }
+
+    private static void testComparator(List<Person> list) {
+        list.sort(Comparator.comparing(Person::getAge));
+        list.forEach(System.out::println);
+    }
+
+    private static void testStream(List<Person> list) {
+        Comparator<Person> comparator = (Person p1, Person p2) -> p2.getAge().compareTo(p1.getAge());
+        list.stream().sorted(comparator).forEach(System.out::println);
+    }
+
+    public static void main(String[] args) {
+        List<Person> list = new ArrayList<>();
+        list.add(new Person("Jack", 12));
+        list.add(new Person("Simon", 19));
+        list.add(new Person("Lemon", 9));
+        list.add(new Person("Maron", 89));
+        list.add(new Person("Tony", 30));
+        testComparator(list);
+        System.out.println("---------------");
+        testComparatorAndLambda(list);
+        System.out.println("---------------");
+        testStream(list);
+
+    }
+}
+```
