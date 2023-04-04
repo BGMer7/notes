@@ -581,3 +581,222 @@ public class ComparatorTest {
     }
 }
 ```
+
+
+
+### LocalDate LocalDateTime
+
+常用的时间类：
+
+常用的类有以下几个类。
+
+| 时间相关类        | 介绍                       |
+| ----------------- | -------------------------- |
+| LocalDateTime     | 时间处理类，最高精确到纳秒 |
+| LocalDate         | 时间处理类，最高精确到天   |
+| DateTimeFormatter | 时间格式化                 |
+| ZoneId            | 时区设置类                 |
+
+
+
+#### Acquire Time
+
+```java 
+package com.gatsby.Java8Features;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+/**
+ * @author caijinyang
+ * @classname LocalDateTest
+ * @description
+ * @date 2023/4/4
+ **/
+
+public class LocalDateTest {
+    private static void nowTimeTest() {
+        LocalDate date = LocalDate.now();
+
+        System.out.println(date);
+        System.out.println(date.getEra());
+        System.out.println(date.getYear());
+        System.out.println(date.getMonthValue());
+        System.out.println(date.getDayOfMonth());
+        System.out.println(date.getDayOfWeek());
+
+        System.out.println("-------------------");
+
+        LocalDateTime time = LocalDateTime.now();
+
+        System.out.println(time);
+        System.out.println(time.getHour());
+        System.out.println(time.getMinute());
+        System.out.println(time.getSecond());
+
+    }
+
+    public static void main(String[] args) {
+        nowTimeTest();
+    }
+
+}
+
+```
+
+
+
+#### Create Time
+
+```java 
+private static void createTimeTest() {
+    LocalDateTime time = LocalDateTime.of(2023, 4, 4, 16, 10);
+
+    System.out.println(time);
+
+    LocalDate date = LocalDate.of(2023, 4, 4);
+
+    System.out.println(date);
+
+    LocalTime localTime = LocalTime.of(16, 11);
+
+    System.out.println(localTime);
+
+}
+```
+
+
+
+#### Convert Time
+
+```java
+/**
+* 日期转换
+*/
+@Test
+public void convertTimeTest() {
+    LocalDateTime parseTime = LocalDateTime.parse("2019-10-01T22:22:22.222");
+    System.out.println("字符串时间转换：" + parseTime);
+
+    LocalDate formatted = LocalDate.parse("20190101", DateTimeFormatter.BASIC_ISO_DATE);
+    System.out.println("字符串时间转换-指定格式：" + formatted);
+
+    // Date 转换成 LocalDateTime
+    Date date = new Date();
+    ZoneId zoneId = ZoneId.systemDefault();
+    System.out.println("Date 转换成 LocalDateTime：" + LocalDateTime.ofInstant(date.toInstant(), zoneId));
+
+    // LocalDateTime 转换成 Date
+    LocalDateTime localDateTime = LocalDateTime.now();
+    Date toDate = Date.from(localDateTime.atZone(ZoneId.systemDefault()).toInstant());
+    System.out.println("LocalDateTime 转换成 Date：" + toDate);\
+        
+    // 当前时间转时间戳
+    long epochMilli = LocalDateTime.now().toInstant(ZoneOffset.of("+8")).toEpochMilli();
+    System.out.println("当前时间转时间戳：" + epochMilli);
+    // 时间戳转换成时间
+    LocalDateTime epochMilliTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(epochMilli), ZoneId.systemDefault());
+    System.out.println("时间戳转换成时间：" + epochMilliTime);
+}
+
+```
+
+
+
+#### Format time
+
+```java
+/**
+ * 日期格式化
+ */
+@Test
+public void formatTest() {
+    LocalDateTime now = LocalDateTime.now();
+    System.out.println("当前时间：" + now);
+    System.out.println("格式化后：" + now.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME));
+    System.out.println("格式化后：" + now.format(DateTimeFormatter.ISO_LOCAL_DATE));
+    System.out.println("格式化后：" + now.format(DateTimeFormatter.ISO_LOCAL_TIME));
+    System.out.println("格式化后：" + now.format(DateTimeFormatter.ofPattern("YYYY-MM-dd hh:mm:ss")));
+}
+
+```
+
+
+
+#### Compare Time
+
+```java 
+/**
+ * 时间比较
+ */
+@Test
+public void diffTest() {
+    LocalDateTime now = LocalDateTime.now();
+    LocalDateTime yestory = now.minusDays(1);
+    System.out.println(now + "在" + yestory + "之后吗?" + now.isAfter(yestory));
+    System.out.println(now + "在" + yestory + "之前吗?" + now.isBefore(yestory));
+
+    // 时间差
+    long day = yestory.until(now, ChronoUnit.DAYS);
+    long month = yestory.until(now, ChronoUnit.MONTHS);
+    long hours = yestory.until(now, ChronoUnit.HOURS);
+    long minutes = yestory.until(now, ChronoUnit.MINUTES);
+    System.out.println("相差月份" + month);
+    System.out.println("相差天数" + day);
+    System.out.println("相差小时" + hours);
+    System.out.println("相差分钟" + minutes);
+
+    // 距离JDK 14 发布还有多少天？
+    LocalDate jdk14 = LocalDate.of(2020, 3, 17);
+    LocalDate nowDate = LocalDate.now();
+    System.out.println("距离JDK 14 发布还有：" + nowDate.until(jdk14, ChronoUnit.DAYS) + "天");
+}
+
+```
+
+
+
+#### Extend Time
+
+```java
+private static void extendTime() {
+    LocalDateTime now = LocalDateTime.now();
+    System.out.println("当前时间：" + now);
+
+    // 第一天
+    LocalDateTime firstDay = now.withDayOfMonth(1);
+    System.out.println("本月第一天：" + firstDay);
+
+    // 当天最后一秒
+    LocalDateTime lastSecondOfDay = now.withHour(23).withMinute(59).withSecond(59);
+    System.out.println("当天最后一秒：" + lastSecondOfDay);
+
+    // 最后一天
+    LocalDateTime lastDay = now.with(TemporalAdjusters.lastDayOfMonth());
+    System.out.println("本月最后一天:" + lastDay);
+
+    // 是否闰年
+    System.out.println("今年是否闰年：" + Year.isLeap(now.getYear()));
+
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
