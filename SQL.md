@@ -707,8 +707,6 @@ explain select * from user where userid =10086 or age =18;
 
 ### MySQL中的日期查询
 
-
-
 MYsql 针对where条件时间范围的查询效率方式对比
 
 end_rec表，游戏记录表 时间字段 time_str 表示每局游戏结束时间，已经针对 time_str加了 B-tree 索引，一共68w条数据
@@ -769,6 +767,10 @@ end_rec表，游戏记录表 时间字段 time_str 表示每局游戏结束时�
 
 
 
+
+## MySQL慢查询优化
+
+### Explain参数
 
 
 
@@ -1429,4 +1431,20 @@ ORDER BY USER_ID;
 
 
 
+
+## Keyword
+
+### DENSE_RANK()
+
+`DENSE_RANK()` is a window function in SQL that assigns a  rank to each distinct row within a result set, based on the values of  one or more specified columns. It differs from the traditional `RANK()` function by assigning the same rank to rows with the same values, causing no gaps in the ranking sequence.
+
+![image-20230731171004430](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230731171004430.png)
+
+DENSE_RANK()是连续的
+
+### RANK()
+
+![image-20230731170939534](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230731170939534.png)
+
+RANK()是会跳过相同的名次
 
