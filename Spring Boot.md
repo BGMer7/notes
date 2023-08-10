@@ -213,17 +213,283 @@ public interface Aware {
 
 Aware接口没有定义任何方法，所以这是一个标识接口。
 
+![image-20230810133823678](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810133823678.png)
+
+```java 
+package org.springframework.beans.factory;
+
+/**
+ * A marker superinterface indicating that a bean is eligible to be notified by the
+ * Spring container of a particular framework object through a callback-style method.
+ * The actual method signature is determined by individual subinterfaces but should
+ * typically consist of just one void-returning method that accepts a single argument.
+ *
+ * <p>Note that merely implementing {@link Aware} provides no default functionality.
+ * Rather, processing must be done explicitly, for example in a
+ * {@link org.springframework.beans.factory.config.BeanPostProcessor}.
+ * Refer to {@link org.springframework.context.support.ApplicationContextAwareProcessor}
+ * for an example of processing specific {@code *Aware} interface callbacks.
+ *
+ * @author Chris Beams
+ * @author Juergen Hoeller
+ * @since 3.1
+ */
+public interface Aware {
+
+}
+```
 
 
 
 
-### autowired
+
+
+
+## Servlet
+
+### Servlet的前世今生
+
+Servlet类似于一个Server Applet（服务器小程序），也就是用来处理业务请求的程序。其实Tomcat也就是一个Web容器和Servlet容器的结合体。
+
+
+
+#### Web容器
+
+Web 容器（Web Container）是一种运行在服务器上的软件环境，用于执行和管理 Web 应用程序。它负责处理客户端发来的 HTTP 请求，将请求交给适当的组件（如 Servlet 或 JSP），并将生成的响应返回给客户端。Web 容器提供了一种标准的方式来处理 Web 请求和响应，使得开发者可以专注于业务逻辑的实现，而不必关心底层的网络通信和请求处理细节。
+
+在 Java 中，常见的 Web 容器包括 Tomcat、Jetty、Undertow 等。这些容器实现了 Servlet 规范和 JSP 规范，允许开发者编写 Servlet 和 JSP 来处理 Web 请求。
+
+以下是 Web 容器的一些主要功能和特性：
+
+1. **请求处理：** Web 容器接收来自客户端的 HTTP 请求，并将请求交给合适的 Servlet 或其他组件进行处理。
+2. **生命周期管理：** Web 容器负责管理 Servlet 和其他 Web 组件的生命周期，包括初始化、销毁等操作。
+3. **线程管理：** Web 容器使用线程池来管理请求处理线程，从而提高性能和资源利用率。
+4. **会话管理：** Web 容器提供了会话管理机制，用于管理客户端与服务器之间的会话状态。
+5. **安全性：** Web 容器提供了安全性功能，可以进行用户认证和授权，保护 Web 应用程序的安全性。
+6. **资源管理：** Web 容器可以管理静态资源（如 HTML、CSS、JS 文件），并提供一种映射机制来访问这些资源。
+7. **错误处理：** Web 容器可以捕获并处理请求处理过程中的错误，如 404 Not Found、500 Internal Server Error 等。
+8. **部署和管理：** Web 容器允许开发者将 Web 应用程序部署到服务器上，并提供一些管理工具来监控和配置应用程序。
+
+总之，Web 容器是支持 Web 应用程序运行的关键组件，它提供了一个运行时环境，使得开发者可以轻松地开发、部署和管理 Web 应用程序。不同的 Web 容器可能有不同的特性和性能优劣，开发者可以根据需求选择合适的容器来运行他们的应用程序。
+
+**Web服务器的作用说穿了就是将主机上的资源映射为一个url供外界访问。**
+
+
+
+#### Servlet容器
+
+Servlet容器中存放Servlet对象，为了能通过Web容器访问资源，需要程序处理请求。
+
+处理请求的整个过程可以细分为三个阶段：
+
+- 接收请求
+- 处理请求
+- 响应请求
+
+![img](https://pic1.zhimg.com/v2-3d86f470ec1dc31bbe93d1df2c30fa47_r.jpg?source=1940ef5c)
+
+但是处理请求的逻辑是不同的，所以Servlet由程序员独立开发设计。
+
+随着后期互联网发展出现了三层架构，一些逻辑也从Servlet抽取出来，分担到Service和Dao层。
+
+![img](https://picx.zhimg.com/v2-f41587429ebde63225029b0c235960c1_r.jpg?source=1940ef5c)
+
+
+
+由于servlet并不擅长直接处理HTML页面，所以出现了JSP这种形式。
+
+
+
+Spring出现后，Servlet开始退居幕后，而SpringMVC更加方便。其实Spring MVC的核心还是DispatcherServlet，本质就是一个Servlet。在HttpServlet的基础上又封装了一条逻辑。
+
+
+
+### Tomcat Servlet
+
+Spring中的Servlet其实就是一个接口，定义了五个方法，完美符合了Servlet的流程：init->service->destory。
+
+![image-20230810135312161](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810135312161.png)
+
+Servlet中最困难的地方在于入参，但是接收的参数对象，已经被封装好，Tomcat会将接收到的request转换为对应的对象。
+
+![](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810141112633.png)
+
+
+
+ServletRequest和ServletResponse为两个interface，需要具体的Servlet请求和响应实现具体的类。
+
+例如HttpServletRequest继承ServletRequest
+
+![image-20230810141953226](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810141953226.png)
+
+
+
+
+
+GeneticServlet实现了Servlet接口
+
+![image-20230810134622584](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810134622584.png)
+
+
+
+HttpServlet继承GeneticServlet类
+
+![image-20230810134422899](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810134422899.png)
+
+例如：HttpServlet在继承中，重写了service方法
+
+![image-20230810143009748](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810143009748.png)
+
+其中HttpServletRequest本身就是ServletRequest的子类
+
+![image-20230810143206439](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810143206439.png)
+
+将请求映射成HttpRequest对象之后，可以直接通过
+
+```java
+request.getHeader();
+request.getUrl();
+request.getQueryString();
+...
+```
+
+
+
+既然HttpServlet每个方法都不是抽象地址，那么为什么要将HttpServlet声明为抽象类呢？
+
+> 一般来说一个类被声明为接口，一般有两个原因：
+>
+> - 有抽象方法
+> - 没有抽象方法，但是不能被实例化
+
+![image-20230810144615945](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810144615945.png)
+
+也就是说，HttpServlet虽然在service中帮我们写了请求方式的判断。但是针对每一种请求，业务逻辑代码是不同的，HttpServlet无法知晓子类想干嘛，所以就抽出七个方法，并且提供了默认实现: 报405、400错误，提示请求不支持。
+
+
+
+但是这个限制很鸡肋，所以需要更强的限制，也就不允许它实例化。
+
+
+
+![img](https://picx.zhimg.com/v2-73b703e690ce018ffe88280376a67dc0_r.jpg?source=1940ef5c)
 
 
 
 
 
 
+
+DispatchServlet继承自HttpServlet
+
+![image-20230810140154114](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810140154114.png)
+
+
+
+servlet的本质是什么，它是如何工作的？ - bravo1988的回答 - 知乎 https://www.zhihu.com/question/21416727/answer/690289895
+
+
+
+### ServletContext
+
+ServletContext，直译的话叫做“Servlet上下文”，其实就是个大容器，是个map。服务器会为每个应用创建一个ServletContext对象：
+
+- ServletContext对象的创建是在服务器启动时完成的
+- ServletContext对象的销毁是在服务器关闭时完成的
+
+
+
+
+
+
+
+
+
+
+
+
+
+### DispatcherServlet
+
+在整个 Spring MVC 框架中，DispatcherServlet 处于核心位置，它负责协调和组织不同组件完成请求处理并返回响应工作。DispatcherServlet 是 SpringMVC统一的入口，所有的请求都通过它。
+
+DispatcherServlet 是前端控制器，配置在web.xml文件中，Servlet依自已定义的具体规则拦截匹配的请求，分发到目标Controller来处理。
+
+一个请求进入后端之后的大致流程：
+
+![img](https://img-blog.csdnimg.cn/7b8817122aa542e7b8e997ef5120688c.png?x-oss-process=image/watermark,type_ZHJvaWRzYW5zZmFsbGJhY2s,shadow_50,text_Q1NETiBA5LqR5bed5LmL5LiL,size_20,color_FFFFFF,t_70,g_se,x_16)
+
+
+
+#### doDispatch
+
+![image-20230810155551065](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810155551065.png)
+
+整个DispatcherServlet的功能也就是在于将Tomcat进来的请求，分发给对应的控制器。
+
+DispatcherServlet的核心在于
+
+![image-20230810161406776](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810161406776.png)
+
+getHandler，获取对应的handler
+
+
+
+在DispatcherServlet中，已经在初始化的时候就赋值了所有的handlerMappings
+
+![image-20230810161644452](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810161644452.png)
+
+当收到请求时，就去遍历整个handlerMappings，来匹配对应的处理器
+
+![image-20230810161725401](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810161725401.png)
+
+handlerMappings在初始化的时候，是随着整个DispatcherServlet一起初始化的
+
+![image-20230810162239850](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810162239850.png)
+
+这样就可以将所有的控制器注入到这个handlerMappings中
+
+![image-20230810162114368](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810162114368.png)
+
+
+
+```java 
+HandlerExecutionChain handler = mapping.getHandler(request);
+```
+
+mapping通过传入request，去匹配handler并将其返回。
+
+getHandler有不同的实现类，进入AbstractHandlerMapping
+
+![image-20230810162629369](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810162629369.png)
+
+在AbstractHandlerMapping中getHandler是调用getHandlerInternal
+
+![image-20230810165028572](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810165028572.png)
+
+
+
+![image-20230810165444759](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810165444759.png)
+
+
+
+
+
+![image-20230810170116063](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810170116063.png)
+
+最终归结于pathLookUp这个map的查值
+
+![image-20230810170345972](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810170345972.png)
+
+![image-20230810170203088](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810170203088.png)
+
+
+
+而这个pathLookup也是在初始化的阶段，将所有的bean的方法路径注册进来的
+
+![image-20230810170519598](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20230810170519598.png)
+
+于是一个HandlerExecutionChain就被返回出去，执行相对应的方法。
 
 
 
