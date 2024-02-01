@@ -315,6 +315,8 @@ Person gatsby = new Person();
 
 那么如果采用无参数构造函数的话，我们还需要定义一个构造函数，用来重载。
 
+因为编译器检测到我们自定义的构造方法之后，就不会默认提供一个无参的构造方法。
+
 ```java
 class Person {
     private String name;
@@ -661,9 +663,13 @@ public class Sparrow implements Flayable, Tweetable, EggLayable {//麻雀
 
    
 
-3. 
+3. 廖雪峰提出的关于继承还是组合的一个判断标准：is关系采用继承，has关系采用组合。
 
+   此外，关于父类和子类：
 
+   所有的class的构造方法，第一行语句必须是调用父类的构造方法。如果没有明确地调用父亲的构造方法，编译器会自动帮我们加一句super()，如果父类没有一个无参的构造方法，就会导致编译失败。
+
+   同时还引出另外一个问题，即子类*不会继承*任何父类的构造方法。子类默认的构造方法是编译器自动生成的，不是继承的。
 
 
 
@@ -6587,7 +6593,7 @@ i=2 -> h = 31 * (31 * (31 * 0 + val[0]) + val[1]) + val[2]
 >    ```
 >    Prime numbers are chosen to best distribute data among hash buckets.  
 >    If the distribution of inputs is random and evenly spread, then the  choice of the hash code/modulus does not matter. It only has an impact  when there is a certain pattern to the inputs.
->                                                                
+>                                                                   
 >    This is often the case when dealing with memory locations. 
 >    For  example, all 32-bit integers are aligned to addresses divisible by 4.  
 >    Check out the table below to visualize the effects of using a prime vs.  non-prime modulus:
