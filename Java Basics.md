@@ -3808,6 +3808,79 @@ for (String s: address) {
 
 
 
+### String format
+
+字符串提供了`formatted()`方法和`format()`静态方法，可以传入其他参数，替换占位符，然后生成新的字符串：
+
+```java 
+public class Main {
+    public static void main(String[] args) {
+        String s = "Hi %s, your score is %d!";
+        System.out.println(s.formatted("Alice", 80));
+        System.out.println(String.format("Hi %s, your score is %.2f!", "Bob", 59.5));
+    }
+}
+
+```
+
+有几个占位符，后面就传入几个参数。参数类型要和占位符一致。我们经常用这个方法来格式化信息。常用的占位符有：
+
+- `%s`：显示字符串；
+- `%d`：显示整数；
+- `%x`：显示十六进制整数；
+- `%f`：显示浮点数。
+
+占位符还可以带格式，例如`%.2f`表示显示两位小数。如果你不确定用啥占位符，那就始终用`%s`，因为`%s`可以显示任何数据类型。要查看完整的格式化语法，请参考[JDK文档](https://docs.oracle.com/en/java/javase/14/docs/api/java.base/java/util/Formatter.html#syntax)。
+
+
+
+### String encoding
+
+在Java中，`char`类型实际上就是两个字节的`Unicode`编码。如果我们要手动把字符串转换成其他编码，可以这样做：
+
+```java
+byte[] b1 = "Hello".getBytes(); // 按系统默认编码转换，不推荐
+byte[] b2 = "Hello".getBytes("UTF-8"); // 按UTF-8编码转换
+byte[] b2 = "Hello".getBytes("GBK"); // 按GBK编码转换
+byte[] b3 = "Hello".getBytes(StandardCharsets.UTF_8); // 按UTF-8编码转换
+```
+
+注意：转换编码后，就不再是`char`类型，而是`byte`类型表示的数组。
+
+如果要把已知编码的`byte[]`转换为`String`，可以这样做：
+
+```java
+byte[] b = ...
+String s1 = new String(b, "GBK"); // 按GBK转换
+String s2 = new String(b, StandardCharsets.UTF_8); // 按UTF-8转换
+```
+
+始终牢记：Java的`String`和`char`在内存中总是以Unicode编码表示。
+
+对于不同版本的JDK，`String`类在内存中有不同的优化方式。具体来说，早期JDK版本的`String`总是以`char[]`存储，它的定义如下：
+
+```java
+public final class String {
+    private final char[] value;
+    private final int offset;
+    private final int count;
+}
+```
+
+而较新的JDK版本的`String`则以`byte[]`存储：如果`String`仅包含ASCII字符，则每个`byte`存储一个字符，否则，每两个`byte`存储一个字符，这样做的目的是为了节省内存，因为大量的长度较短的`String`通常仅包含ASCII字符：
+
+```java
+public final class String {
+    private final byte[] value;
+    private final byte coder; // 0 = LATIN1, 1 = UTF16
+```
+
+对于使用者来说，`String`内部的优化不影响任何已有代码，因为它的`public`方法签名是不变的。
+
+
+
+
+
 ### String Substring
 
 | method                                                | type   |      |
