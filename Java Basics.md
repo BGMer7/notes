@@ -1140,6 +1140,73 @@ Java的namespace叫package，一个类总是属于一个package，class只是一
 
 
 
+### inner class
+
+如果一个类定义在另一个类的内部，那这个类就是inner class。
+
+```java
+class Outer {
+    class Inner {
+        // 定义了一个Inner Class
+    }
+}
+```
+
+上述定义的`Outer`是一个普通类，而`Inner`是一个Inner Class，它与普通类有个最大的不同，就是Inner Class的实例不能单独存在，必须依附于一个Outer Class的实例。示例代码如下：
+
+```java
+public class Main {
+    public static void main(String[] args) {
+        Outer outer = new Outer("Nested"); // 实例化一个Outer
+        Outer.Inner inner = outer.new Inner(); // 实例化一个Inner
+        inner.hello();
+    }
+}
+
+class Outer {
+    private String name;
+
+    Outer(String name) {
+        this.name = name;
+    }
+
+    class Inner {
+        void hello() {
+            System.out.println("Hello, " + Outer.this.name);
+        }
+    }
+}
+
+```
+
+
+
+### classpath & jar
+
+CLASSPATH直译过来是类路径，是Java环境配置中要设置的一个环境变量，就是.class文件的路径，表示JVM从哪里去寻找要运行的class文件，CLASSPATH = D:\java表示执行java命令时去D:\java目录中去找需要被执行的class文件并运行。
+
+
+
+在java5之前CLASSPATH没有默认值，如果想要使用当前路径作为类路径的话，可以使用“.”，用“.”表示当前路径；若CLASSPATH=.;D:\java，表示先在当前目录找class文件，要是没找到再去c:\test目录找参数后跟着的class文件并执行；这里的“;”表示有多个可执行的class文件目录，并且多个值（也就是多个目录）之间用英文的分号（“;”）隔开。
+
+
+
+从Java5开始CLASSPATH默认就是当前路径，一般情况下就不需要再设定了。
+
+先使用javac -d D:\classes Hello.java将Hello.java编译到D:\classes目录下，编译成功后的文件为Hello.class；
+
+然后再使用 java -classpath D:\classes Hello 运行Hello.class
+
+```java
+public class Hello {public static void main(String[] args) {
+      System.out.println("Hello World!");
+}
+```
+
+ 不要把任何Java核心库添加到classpath中！JVM根本不依赖classpath加载核心库！
+
+更好的做法是，不要设置`classpath`！默认的当前目录`.`对于绝大多数情况都够用了。
+
 ## naming conventions
 
 [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html)
@@ -6593,7 +6660,7 @@ i=2 -> h = 31 * (31 * (31 * 0 + val[0]) + val[1]) + val[2]
 >    ```
 >    Prime numbers are chosen to best distribute data among hash buckets.  
 >    If the distribution of inputs is random and evenly spread, then the  choice of the hash code/modulus does not matter. It only has an impact  when there is a certain pattern to the inputs.
->                                                                   
+>                                                                      
 >    This is often the case when dealing with memory locations. 
 >    For  example, all 32-bit integers are aligned to addresses divisible by 4.  
 >    Check out the table below to visualize the effects of using a prime vs.  non-prime modulus:
