@@ -113,7 +113,167 @@ System.out.println(nsddStr);
 
 ### enum
 
+枚举类的一个经典使用是
 
+```java 
+enum Weekday {
+    MON(1), TUE(2), WED(3), THU(4), FRI(5), SAT(6), SUN(0);
+
+    public final int dayValue;
+
+    private Weekday(int dayValue) {
+        this.dayValue = dayValue;
+    }
+}
+
+```
+
+对比如果直接使用常量类的情况：
+
+```java
+public class Weekday {
+    public static final int SUN = 0;
+    public static final int MON = 1;
+    public static final int TUE = 2;
+    public static final int WED = 3;
+    public static final int THU = 4;
+    public static final int FRI = 5;
+    public static final int SAT = 6;
+}
+```
+
+那么使用常量类的时候就是这样引用：
+
+```java 
+if (day == Weekday.SAT || day == Weekday.SUN) {
+    // TODO: work at home
+}
+```
+
+这样的用法存在一个问题，编译器无法检查每个值的合理性。例如：
+
+```java
+if (weekday == 6 || weekday == 7) {
+    if (tasks == Weekday.MON) {
+        // TODO:
+    }
+}
+```
+
+- 注意到`Weekday`定义的常量范围是`0`~`6`，并不包含`7`，编译器无法检查不在枚举中的`int`值；
+- 定义的常量仍可与其他变量比较，但其用途并非是枚举星期值。
+
+
+
+为了让编译器能自动检查某个值在枚举的集合内，并且，不同用途的枚举需要不同的类型来标记，不能混用，我们可以使用`enum`来定义枚举类：
+
+```java
+public class Main {
+    public static void main(String[] args) {
+        Weekday day = Weekday.SUN;
+        if (day == Weekday.SAT || day == Weekday.SUN) {
+            System.out.println("Work at home!");
+        } else {
+            System.out.println("Work at office!");
+        }
+    }
+}
+
+enum Weekday {
+    SUN, MON, TUE, WED, THU, FRI, SAT;
+}
+```
+
+注意到定义枚举类是通过关键字`enum`实现的，我们只需依次列出枚举的常量名。
+
+和`int`定义的常量相比，使用`enum`定义枚举有如下好处：
+
+首先，`enum`常量本身带有类型信息，即`Weekday.SUN`类型是`Weekday`，编译器会自动检查出类型错误。例如，下面的语句不可能编译通过：
+
+```java
+int day = 1;
+if (day == Weekday.SUN) { // Compile error: bad operand types for binary operator '=='
+}
+```
+
+其次，不可能引用到非枚举类的值，因为无法通过编译。
+
+最后，不同类型的枚举不能互相比较或者赋值，因为类型不符。例如，不能给一个`Weekday`枚举类型的变量赋值为`Color`枚举类型的值：
+
+```java
+Weekday x = Weekday.SUN; // ok!
+Weekday y = Color.RED; // Compile error: incompatible types
+```
+
+这就使得编译器可以在编译期自动检查出所有可能的潜在错误。
+
+
+
+使用`enum`定义的枚举类是一种引用类型。前面我们讲到，引用类型比较，要使用`equals()`方法，如果使用`==`比较，它比较的是两个引用类型的变量是否是同一个对象。因此，引用类型比较，要始终使用`equals()`方法，但`enum`类型可以例外。
+
+这是因为`enum`类型的每个常量在JVM中只有一个唯一实例，所以可以直接用`==`比较：
+
+```java
+if (day == Weekday.FRI) { // ok!
+}
+if (day.equals(Weekday.SUN)) { // ok, but more code!
+}
+```
+
+
+
+实际上enum定义的枚举类和其他的class没有区别，但是有以下特点：
+
+- 定义的`enum`类型总是继承自`java.lang.Enum`，且无法被继承；
+- 只能定义出`enum`的实例，而无法通过`new`操作符创建`enum`的实例；
+- 定义的每个实例都是引用类型的唯一实例；
+- 可以将`enum`类型用于`switch`语句。
+
+
+
+因为`enum`是一个`class`，每个枚举的值都是`class`实例，因此，这些实例有一些方法：
+
+#### name()
+
+返回常量名，例如：
+
+```java
+String s = Weekday.SUN.name(); // "SUN"
+```
+
+#### ordinal()
+
+返回定义的常量的顺序，从0开始计数，例如：
+
+```java
+int n = Weekday.MON.ordinal(); // 1
+```
+
+改变枚举常量定义的顺序就会导致`ordinal()`返回值发生变化。例如：
+
+```java
+public enum Weekday {
+    SUN, MON, TUE, WED, THU, FRI, SAT;
+}
+```
+
+和
+
+```java
+public enum Weekday {
+    MON, TUE, WED, THU, FRI, SAT, SUN;
+}
+```
+
+的`ordinal`就是不同的。如果在代码中编写了类似`if(x.ordinal()==1)`这样的语句，就要保证`enum`的枚举顺序不能变。新增的常量必须放在最后。
+
+
+
+可以为`enum`编写构造方法、字段和方法
+
+`enum`的构造方法要声明为`private`，字段强烈建议声明为`final`；
+
+`enum`适合用在`switch`语句中。
 
 
 
@@ -6733,7 +6893,7 @@ i=2 -> h = 31 * (31 * (31 * 0 + val[0]) + val[1]) + val[2]
 >    ```
 >    Prime numbers are chosen to best distribute data among hash buckets.  
 >    If the distribution of inputs is random and evenly spread, then the  choice of the hash code/modulus does not matter. It only has an impact  when there is a certain pattern to the inputs.
->                                                                      
+>                                                                         
 >    This is often the case when dealing with memory locations. 
 >    For  example, all 32-bit integers are aligned to addresses divisible by 4.  
 >    Check out the table below to visualize the effects of using a prime vs.  non-prime modulus:
