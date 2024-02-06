@@ -784,15 +784,88 @@ private static void extendTime() {
 
 
 
+## Java 16 Features
+
+### Record
+
+以前我们定义类都是用`class`关键词，但从Java 16开始，我们将多一个关键词`record`，它也可以用来定义类。`record`关键词的引入，主要是为了提供一种更为简洁、紧凑的`final`类的定义方式。
+
+Java `Record` 是一种不变类，类似于 String，Integer。让我们看一个简单的例子。
+
+```java
+public record Data( int x, int y)
+```
+
+我们使用 record 关键字来创建记录类，它的等价类写法如下：
+
+```java
+public final class Data {
+
+    final private int x;
+    final private int y;
+    public Data( int x, int y){
+        this.x = x;
+        this.y = y;
+    }
+
+    public boolean equals(Object o) {
+        ...
+    }
+
+    public int hashCode() {
+       ...
+    }
+
+    public String toString() {
+        ...
+    }
+}
+
+```
+
+当我们声明一个没有任何构造函数的普通类时，编译器会提供一个没有参数的缺省构造函数。对于记类录，也会隐式创建构造函数。
+
+```java
+public record Data(int x, int y) {
+
+    public Data {
+        if (x >y) {
+            throw new IllegalArgumentException();
+        }
+        x+=100;
+        y+=100;
+    }
+}
+
+```
 
 
 
+记录类不能继承，也不支持继承，唯一的父类是java.lang.Record
 
+记录类可以实现接口，无论它是单个接口还是多个接口。
 
+```java
+public record Data( int x, int y) implements Runnable, Serializable
+```
 
+可以在记录类里定义方法，包括`accessor、equals、hashcode` 方法。然而，您需要确保不会打破记录类的不可变性。
 
+当我们只想在函数中临时保存不可变数据时，记录类会非常好用。
 
+```java
+public List<Person> sortPeopleByAge(List<Person> people) {
+    
+    record Data(Person person, int age){};
 
+    return people.stream()
+            .map(person -> new Data(person, computeAge(person)))
+            .sorted((d1, d2) -> Double.compare(d2.age(), d1.age()))
+            .map(Data::person)
+            .collect(toList());
+}
+
+```
 
 
 
