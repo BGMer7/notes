@@ -2332,15 +2332,334 @@ class cl = new class(String);
 
 
 
+#### JVM annotation
+
+从JVM的角度看，注解本身对代码逻辑没有任何影响，如何使用注解完全由工具决定。
+
+Java的注解可以分为三类：
+
+第一类是由编译器使用的注解，例如：
+
+- `@Override`：让编译器检查该方法是否正确地实现了覆写；
+- `@SuppressWarnings`：告诉编译器忽略此处代码产生的警告。
+
+这类注解不会被编译进入`.class`文件，它们在编译后就被编译器扔掉了。
+
+第二类是由工具处理`.class`文件使用的注解，比如有些工具会在加载class的时候，对class做动态修改，实现一些特殊的功能。这类注解会被编译进入`.class`文件，但加载结束后并不会存在于内存中。这类注解只被一些底层库使用，一般我们不必自己处理。
+
+第三类是在程序运行期能够读取的注解，它们在加载后一直存在于JVM中，这也是最常用的注解。例如，一个配置了`@PostConstruct`的方法会在调用构造方法后自动被调用（这是Java代码读取该注解实现的功能，JVM并不会识别该注解）。
+
+定义一个注解时，还可以定义配置参数。配置参数可以包括：
+
+- 所有基本类型；
+- String；
+- 枚举类型；
+- 基本类型、String、Class以及枚举的数组。
+
+因为配置参数必须是常量，所以，上述限制保证了注解在定义时就已经确定了每个参数的值。
+
+注解的配置参数可以有默认值，缺少某个配置参数时将使用默认值。
+
+此外，大部分注解会有一个名为`value`的配置参数，对此参数赋值，可以只写常量，相当于省略了value参数。
+
+如果只写注解，相当于全部使用默认值。
 
 
 
+#### custom annotation
+
+Java使用@interface来定义注解，所有的注解会自动继承java.lang.Annotation接口，且不能再继承别的类或是接口，定义如下：
+
+- 注解的成员参数只能用public或默认(default) 访问权修饰来进行修饰。
+- 成员参数只能使用八种基本类型（byte、short、char、int、long、float、double、boolean）和String、Enum、Class、annotations等数据类型，及其数组。
+- 获取类方法和字段的注解信息，只能通过Java的反射技术来获取 Annotation 对象。
+- 注解可以没有定义成员，只做标识。
+
+格式如下：
+
+```java
+public @interface Report {
+    int type() default 0;
+    String level() default "info";
+    String value() default "";
+}
+```
+
+注解的参数类似无参数方法，可以用`default`设定一个默认值（强烈推荐）。最常用的参数应当命名为`value`。
 
 
 
+有一些注解可以修饰其他注解，这些注解就称为元注解（meta annotation）。Java标准库已经定义了一些元注解，我们只需要使用元注解，通常不需要自己去编写元注解。
+
+##### @Target
+
+最常用的元注解是`@Target`。使用`@Target`可以定义`Annotation`能够被应用于源码的哪些位置：
+
+对应ElementType参数值适用范围如下：
+
+- `ElementType.TYPE`: 类、接口、注解、enum
+- `ElementType.CONSTRUCTOR`: 构造函数
+- `ElementType.FIELD`: 成员变量、对象、属性、枚举的常量
+- `ElementType.LOCAL_VARIABLE`: 局部变量
+- `ElementType.METHOD`: 方法
+- `ElementType.PACKAGE`: 包
+- `ElementType.PARAMETER`: 参数
+- `ElementType.ANNOTATION_TYPE`: 注解
+- `ElementType.TYPE_PARAMETER`：类型参数，表示这个注解可以用在 Type的声明式前,jdk1.8引入。
+- `ElementType.TYPE_USE`：类型的注解，表示这个注解可以用在所有使用Type的地方（如：泛型，类型转换等），jdk1.8引入。
+
+例如，定义注解`@Report`可用在方法上，我们必须添加一个`@Target(ElementType.METHOD)`：
+
+```java
+@Target(ElementType.METHOD)
+public @interface Report {
+    int type() default 0;
+    String level() default "info";
+    String value() default "";
+}
+```
+
+定义注解`@Report`可用在方法或字段上，可以把`@Target`注解参数变为数组`{ ElementType.METHOD, ElementType.FIELD }`：
+
+```java
+@Target({
+    ElementType.METHOD,
+    ElementType.FIELD
+})
+public @interface Report {
+    ...
+}
+```
+
+实际上`@Target`定义的`value`是`ElementType[]`数组，只有一个元素时，可以省略数组的写法。
+
+##### @Retention
+
+通过@Retention定义注解的生命周期，格式如下：
+
+```text
+@Retention(RetentionPolicy.SOURCE)
+```
+
+其中RetentionPolicy的不同策略对应的生命周期如下：
+
+- `RetentionPolicy.SOURCE` : 仅存在于源代码中，编译阶段会被丢弃，不会包含于class字节码文件中。`@Override`, `@SuppressWarnings`都属于这类注解。
+- `RetentionPolicy.CLASS` : 默认策略，在class字节码文件中存在，在类加载的时被丢弃，运行时无法获取到。
+- `RetentionPolicy.RUNTIME` : 始终不会丢弃，可以使用反射获得该注解的信息。自定义的注解最常用的使用方式。
+
+如果`@Retention`不存在，则该`Annotation`默认为`CLASS`。因为通常我们自定义的`Annotation`都是`RUNTIME`，所以，务必要加上`@Retention(RetentionPolicy.RUNTIME)`这个元注解：
+
+```java
+@Retention(RetentionPolicy.RUNTIME)
+public @interface Report {
+    int type() default 0;
+    String level() default "info";
+    String value() default "";
+}
+```
+
+##### @Repeatable
+
+使用`@Repeatable`这个元注解可以定义`Annotation`是否可重复。这个注解应用不是特别广泛。
+
+```java
+@Repeatable(Reports.class)
+@Target(ElementType.TYPE)
+public @interface Report {
+    int type() default 0;
+    String level() default "info";
+    String value() default "";
+}
+
+@Target(ElementType.TYPE)
+public @interface Reports {
+    Report[] value();
+}
+```
+
+经过`@Repeatable`修饰后，在某个类型声明处，就可以添加多个`@Report`注解：
+
+```java
+@Report(type=1, level="debug")
+@Report(type=2, level="warning")
+public class Hello {
+}
+```
+
+##### @Inherited
+
+使用`@Inherited`定义子类是否可继承父类定义的`Annotation`。`@Inherited`仅针对`@Target(ElementType.TYPE)`类型的`annotation`有效，并且仅针对`class`的继承，对`interface`的继承无效：
+
+```java
+@Inherited
+@Target(ElementType.TYPE)
+public @interface Report {
+    int type() default 0;
+    String level() default "info";
+    String value() default "";
+}
+```
+
+在使用的时候，如果一个类用到了`@Report`：
+
+```java
+@Report(type=1)
+public class Person {
+}
+```
+
+则它的子类默认也定义了该注解：
+
+```java
+public class Student extends Person {
+}
+```
 
 
 
+下面通过一个实例来演示注解的使用：通过注解进行赋值和通过注解进行校验。
+
+
+
+这里定义两个注解，一个用来赋值，一个用来校验。
+
+性别校验
+
+```java
+/**
+ * 性别赋值
+ * @author zzs
+ */
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.FIELD,ElementType.METHOD})
+@Inherited
+public @interface InitSex {
+    /**
+     * sex enum
+     * @author zzs
+     */
+    enum SEX_TYPE {MAN, WOMAN}
+    SEX_TYPE sex() default SEX_TYPE.MAN;
+}
+```
+
+年龄校验
+
+```java
+/**
+ * 年龄校验
+ * @author zzs
+ */
+@Documented
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.FIELD,ElementType.METHOD})
+@Inherited
+public @interface ValidateAge {
+    /**
+     * 最小值
+     */
+    int min() default 18;
+    
+    /**
+     * 最大值
+     */
+    int max() default 99;
+    
+    /**
+     * 默认值
+     */
+    int value() default 20;
+}
+```
+
+
+
+定义数据模型
+
+```java
+/**
+ * user
+ *
+ * @author zzs
+ */
+public class User {
+    private String username;
+    @ValidateAge(min = 20, max = 35, value = 22)
+    
+    private int age;
+    @InitSex(sex = InitSex.SEX_TYPE.MAN)
+    
+    private String sex;
+    // 省略getter/setter方法
+}
+```
+
+调用
+
+```java
+import java.lang.reflect.Field;
+/**
+ * @author zzs
+ */
+public class TestInitParam {
+    public static void main(String[] args) throws IllegalAccessException {
+        User user = new User();
+        initUser(user);
+        // 年龄为0，校验为通过情况
+        boolean checkResult = checkUser(user);
+        printResult(checkResult);
+        // 重新设置年龄，校验通过情况
+        user.setAge(22);
+        checkResult = checkUser(user);
+        printResult(checkResult);
+    }
+    
+    static void initUser(User user) throws IllegalAccessException {
+        // 获取User类中所有的属性(getFields无法获得private属性)
+        Field[] fields = User.class.getDeclaredFields();
+        // 遍历所有属性
+        for (Field field : fields) {
+            // 如果属性上有此注解，则进行赋值操作
+            if (field.isAnnotationPresent(InitSex.class)) {
+                InitSex init = field.getAnnotation(InitSex.class);
+                field.setAccessible(true);
+                // 设置属性的性别值
+                field.set(user, init.sex().toString());
+                System.out.println("完成属性值的修改，修改值为:" + init.sex().toString());
+            }
+        }
+    }
+    
+    static boolean checkUser(User user) throws IllegalAccessException {
+        // 获取User类中所有的属性(getFields无法获得private属性)
+        Field[] fields = User.class.getDeclaredFields();
+        boolean result = true;
+        // 遍历所有属性
+        for (Field field : fields) {
+            // 如果属性上有此注解，则进行赋值操作
+            if (field.isAnnotationPresent(ValidateAge.class)) {
+                ValidateAge validateAge = field.getAnnotation(ValidateAge.class);
+                field.setAccessible(true);
+                int age = (int) field.get(user);
+                if (age < validateAge.min() || age > validateAge.max()) {
+                    result = false;
+                    System.out.println("年龄值不符合条件");
+                }
+            }
+        }
+        return result;
+    }
+    
+    static void printResult(boolean checkResult) {
+        if (checkResult) {
+            System.out.println("校验通过");
+        } else {
+            System.out.println("校验未通过");
+        }
+    }
+}
+```
 
 
 
