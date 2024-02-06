@@ -1667,6 +1667,42 @@ public class MyException {
 
 
 
+有些情况下不需要catch，可以直接使用try...finally...的结构，例如
+
+```java
+try {
+    if (!ctx.getBean(ActionHandler.class).handle(_req, _ans)) {
+        gkfmcStr[ei.GetThreadTag()] = new String("线程号：" + ei.GetThreadTag());
+        ans.SetString(HS2013Key.ERROR_NO, "100");
+        ans.SetString(HS2013Key.ERROR_MESSAGE, "该功能尚未实现");
+    }
+
+    ans.SetBuffer(_ans.GetBuffer());
+} finally {
+    ThreadContext.clear();
+}
+```
+
+和
+
+```java
+try {
+    success.set(expandInterface.CallForwardAction(router, async, reqTsb, ansTsb));
+    ans.SetBuffer(ansTsb.GetBuffer());
+} catch (Exception e) {
+    // TODO
+} finally {
+    reqTsb.Free();
+    reqTsb = null;
+    ansTsb.Free();
+    ansTsb = null;
+}
+```
+
+这两种情况一种涉及ThreadLocal，一种涉及内存操作，如果出现在try之前就出现异常，这个异常是不会被捕获的，所以需要finally来将线程和内存释放，这一点很重要。
+
+
+
 ### assert
 
 assertion断言是一种Java常用的调试方法，
@@ -1697,7 +1733,174 @@ assert x>=0: "x must >= 0";
 
 
 
+### custom exception
 
+Java标准库定义的常用异常包括：
+
+```ascii
+Exception
+│
+├─ RuntimeException
+│  │
+│  ├─ NullPointerException
+│  │
+│  ├─ IndexOutOfBoundsException
+│  │
+│  ├─ SecurityException
+│  │
+│  └─ IllegalArgumentException
+│     │
+│     └─ NumberFormatException
+│
+├─ IOException
+│  │
+│  ├─ UnsupportedCharsetException
+│  │
+│  ├─ FileNotFoundException
+│  │
+│  └─ SocketException
+│
+├─ ParseException
+│
+├─ GeneralSecurityException
+│
+├─ SQLException
+│
+└─ TimeoutException
+```
+
+在一个大型项目中，可以自定义新的异常类型，但是，保持一个合理的异常继承体系是非常重要的。
+
+一个常见的做法是自定义一个`BaseException`作为“根异常”，然后，派生出各种业务类型的异常。
+
+`BaseException`需要从一个适合的`Exception`派生，通常建议从`RuntimeException`派生：
+
+```java
+public class BaseException extends RuntimeException {
+}
+```
+
+其他业务类型的异常就可以从`BaseException`派生：
+
+```java
+public class UserNotFoundException extends BaseException {
+}
+
+public class LoginFailedException extends BaseException {
+}
+
+...
+```
+
+自定义的`BaseException`应该提供多个构造方法：
+
+```Java
+public class BaseException extends RuntimeException {
+    public BaseException() {
+        super();
+    }
+
+    public BaseException(String message, Throwable cause) {
+        super(message, cause);
+    }
+
+    public BaseException(String message) {
+        super(message);
+    }
+
+    public BaseException(Throwable cause) {
+        super(cause);
+    }
+}
+```
+
+上述构造方法实际上都是原样照抄`RuntimeException`。这样，抛出异常的时候，就可以选择合适的构造方法。通过IDE可以根据父类快速生成子类的构造方法。
+
+
+
+### NPE
+
+如果遇到`NullPointerException`，我们应该如何处理？首先，必须明确，`NullPointerException`是一种代码逻辑错误，遇到`NullPointerException`，遵循原则是早暴露，早修复，严禁使用`catch`来隐藏这种编码错误：
+
+```java
+// 错误示例: 捕获NullPointerException
+try {
+    transferMoney(from, to, amount);
+} catch (NullPointerException e) {
+}
+```
+
+好的编码习惯可以极大地降低`NullPointerException`的产生，例如：
+
+成员变量在定义时初始化：
+
+```java
+public class Person {
+    private String name = "";
+}
+```
+
+使用空字符串`""`而不是默认的`null`可避免很多`NullPointerException`，编写业务逻辑时，用空字符串`""`表示未填写比`null`安全得多。
+
+返回空字符串`""`、空数组而不是`null`：
+
+```java
+public String[] readLinesFromFile(String file) {
+    if (getFileSize(file) == 0) {
+        // 返回空数组而不是null:
+        return new String[0];
+    }
+    ...
+}
+```
+
+这样可以使得调用方无需检查结果是否为`null`。
+
+如果调用方一定要根据`null`判断，比如返回`null`表示文件不存在，那么考虑返回`Optional<T>`：
+
+```java
+public Optional<String> readFromFile(String file) {
+    if (!fileExist(file)) {
+        return Optional.empty();
+    }
+    ...
+}
+```
+
+这样调用方必须通过`Optional.isPresent()`判断是否有结果。
+
+
+
+从Java 14开始，如果产生了`NullPointerException`，JVM可以给出详细的信息告诉我们`null`对象到底是谁。我们来看例子：
+
+```java
+public class Main {
+    public static void main(String[] args) {
+        Person p = new Person();
+        System.out.println(p.address.city.toLowerCase());
+    }
+}
+
+class Person {
+    String[] name = new String[2];
+    Address address = new Address();
+}
+
+class Address {
+    String city;
+    String street;
+    String zipcode;
+}
+
+```
+
+可以在`NullPointerException`的详细信息中看到类似`... because "<local1>.address.city" is null`，意思是`city`字段为`null`，这样我们就能快速定位问题所在。
+
+这种增强的`NullPointerException`详细信息是Java 14新增的功能，但默认是关闭的，我们可以给JVM添加一个`-XX:+ShowCodeDetailsInExceptionMessages`参数启用它：
+
+```shell
+java -XX:+ShowCodeDetailsInExceptionMessages Main.java
+```
 
 
 
