@@ -784,6 +784,67 @@ private static void extendTime() {
 
 
 
+### Stream
+
+#### Obtaining Stream
+
+获取一个stream主要有以下几种方式
+
+1. 从Array中获取一个stream
+
+   ```java
+   private static void createStreamFromArray() {
+       double[] elements = {3.0, 4.5, 6.7, 2.3};
+       DoubleStream stream = Arrays.stream(elements);
+       stream.forEach(e -> System.out.println(e));
+   }
+   ```
+
+2. 从Collection中获取一个stream
+
+   ```java
+   private static void createStreamFromCollection() {
+       Double[] elements = {3.0, 4.5, 6.7, 2.3};
+       List<Double> elementsInCollection = Arrays.asList(elements);
+       Stream<Double> stream = elementsInCollection.stream();
+       Stream<Double> parallelStream = elementsInCollection.parallelStream();
+       stream.forEach(e->System.out.println(e));
+       parallelStream.forEach(e->System.out.println(e));
+   }
+   ```
+
+3. 使用静态工厂直接创建stream
+
+   ```java
+   Stream<Integer> stream = Stream.of(3, 4, 6, 2);
+   IntStream integerStream = IntStream.of(3, 4, 6, 2);
+   LongStream longStream = LongStream.of(3l, 4l, 6l, 2l);
+   DoubleStream doubleStream = DoubleStream.of(3.0, 4.5, 6.7, 2.3);
+   ```
+
+
+
+#### Stream Operations
+
+流操作主要分为两种类型：中间操作和终端操作
+
+1. **Intermediate operations**: Intermediate operations **transform one stream into another stream**. An example of an Intermediate operation is `map()` which transforms one element into another by applying a function (called a predicate) on each element.
+2. **Terminal operations**: Terminal operations are applied on a stream **to get a single result** like a primitive or object or collection or may not return anything. An example of a Terminal operation is `count()` which counts the total number of elements in a stream.
+
+
+
+
+
+
+
+
+
+
+
+### Collectors
+
+
+
 ## Java 16 Features
 
 ### Record
