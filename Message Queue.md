@@ -203,25 +203,130 @@ Kafka 是一种分布式的，基于发布 / 订阅的消息系统。主要设�
 
 ### Kafka 基础概念
 
-#### 概念一：Producer/Consumer
+#### Producer
 
 对于 Kafka 来说客户端有两种基本类型：**生产者（Producer）**和**消费者（Consumer）**。除此之外，还有用来做数据集成的 Kafka Connect API 和流式处理的 Kafka Streams 等高阶客户端，但这些高阶客户端底层仍然是生产者和消费者API，它们只不过是在上层做了封装。
 
-这很容易理解，生产者（也称为发布者）创建消息，而消费者（也称为订阅者）负责消费or读取消息。
+Producer：生产者，也就是发送消息的一方。生产者负责创建消息，然后将其投递到Kafka中。
+
+#### Consumer
+
+Consumer：消费者，也就是接收消息的一方。消费者连接到Kafka上并接收消息，进而进行相应的业务逻辑处理。
 
 
 
-#### 概念二：Topic/Partition
+#### Topic
 
-在 Kafka 中，消息以**主题（Topic）**来分类，每一个主题都对应一个「消息队列」，这有点儿类似于数据库中的表。但是如果我们把所有同类的消息都塞入到一个“中心”队列中，势必缺少可伸缩性，无论是生产者/消费者数目的增加，还是消息数量的增加，都可能耗尽系统的性能或存储。
+Kafka中的消息以主题为单位进行归类，生产者负责将消息发送到特定的主题（发送到Kafka集群中的每一条消息都要指定一个主题），而消费者负责订阅主题并进行消费。
 
-我们使用一个生活中的例子来说明：现在 A 城市生产的某商品需要运输到 B 城市，走的是公路，那么单通道的高速公路不论是在「A 城市商品增多」还是「现在 C 城市也要往 B 城市运输东西」这样的情况下都会出现「吞吐量不足」的问题。所以我们现在引入**分区（Partition）**的概念，类似“允许多修几条道”的方式对我们的主题完成了水平扩展。
+- 每个 `topic` 是一个发布-订阅消息的通道。它可以看作是一个队列，用于存储生产者发送的消息。
+- 多个 `partition` 可以组成一个 `topic`，每个 `partition` 是一个独立的有序消息队列。
+- 每个 `topic` 可以有不同的分区，这些分区可以分布在不同的 Kafka 服务器（broker）上。
+
+#### Partition
+
+每个 `topic` 可以有多个 `partition`，用于将消息分散存储在不同的队列中。
+
+- `partition` 中的消息是有序的，它们按照生产者发送的顺序存储。
+- `partition` 中的消息是独立的，一个 `partition` 中的消息不会影响其他 `partition` 中的消息。
+- `partition` 的数量可以通过创建 `topic` 时指定，或者在创建后通过 Kafka 管理工具修改。
+
+主题是一个逻辑上的概念，它还可以细分为多个分区，一个分区只属于单个主题，很多时候也会把分区称为主题分区（Topic-Partition）。同一主题下的不同分区包含的消息是不同的，分区在存储层面可以看作一个可追加的日志（Log）文件，消息在被追加到分区日志文件的时候都会分配一个特定的偏移量（offset）。offset是消息在分区中的唯一标识，Kafka通过它来保证消息在分区内的顺序性，不过offset并不跨越分区，也就是说，Kafka保证的是分区有序而不是主题有序。
+
+如图 1-2 所示，主题中有 4 个分区，消息被顺序追加到每个分区日志文件的尾部。Kafka中的分区可以分布在不同的服务器（broker）上，也就是说，一个主题可以横跨多个broker，以此来提供比单个broker更强大的性能。
+
+![image-20240423104810852](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20240423104810852.png)
+
+每一条消息被发送到broker之前，会根据分区规则选择存储到哪个具体的分区。如果分区规则设定得合理，所有的消息都可以均匀地分配到不同的分区中。如果一个主题只对应一个文件，那么这个文件所在的机器 I/O 将会成为这个主题的性能瓶颈，而分区解决了这个问题。在创建主题的时候可以通过指定的参数来设置分区的个数，当然也可以在主题创建完成之后去修改分区的数量，通过增加分区的数量可以实现水平扩展。
+
+> Topic和Partition的关系：
+>
+> - 一个 `topic` 可以有多个 `partition`，每个 `partition` 是 `topic` 的一个物理分割。
+> - `partition` 存储在不同的 `broker` 上，每个 `broker` 存储 `topic` 的一个或多个 `partition`。
+> - 生产者将消息发送到 `topic`，而消费者可以从 `topic` 的一个或多个 `partition` 中读取消息。
+>
+> 通过将一个 `topic` 拆分为多个 `partition`，Kafka 能够提供更高的吞吐量，因为生产者和消费者可以并行处理不同的 `partition`。此外，`partition` 的设计还允许 Kafka 实现容错和高可用性，因为即使某些 `broker` 发生故障，其他 `broker` 仍然可以处理 `topic` 的其他 `partition`。
 
 
 
-#### 概念三：Broker/Cluster
+在 Kafka 中，虽然每个 `partition` 内部的消息是有序的，但是 `topic` 中的不同 `partition` 之间并没有保证有序性。每个 `partition` 都是独立的队列，它们存储在不同的 `broker` 上，并且可以独立地进行读写操作。
 
-一个 Kafka 服务器也称为 Broker，它接受生产者发送的消息并存入磁盘；Broker  同时服务消费者拉取分区消息的请求，返回目前已经提交的消息。使用特定的机器硬件，一个 Broker  每秒可以处理成千上万的分区和百万量级的消息。（现在动不动就百万量级..我特地去查了一把，好像确实集群的情况下吞吐量挺高的..摁..）
+Kafka 的设计哲学是允许 `topic` 中的不同 `partition` 之间消息的顺序性由应用逻辑来控制。以下是一些方法，可以帮助你在应用程序层面保证 `topic` 中不同 `partition` 之间的消息顺序：
+
+1. **Key-Based Partitioning**：在生产者端，可以为消息指定一个键（key），这个键可以是消息内容的哈希值或者是一个顺序编号。Kafka 服务器会根据键的哈希值将消息发送到不同的 `partition`。如果生产者确保具有相同键的消息被发送到同一个 `partition`，那么这些消息在 `topic` 中的顺序性就可以得到保证。
+2. **Consumer Group**：在消费者端，可以将多个消费者组织成一个消费者组。每个消费者组内的消费者可以订阅同一个 `topic` 的不同 `partition`。如果消费者组内的所有消费者都按顺序消费，那么它们可以看到整个 `topic` 中消息的顺序。
+3. **事务性消息**：Kafka 支持事务性消息，即可以保证一系列消息作为一个原子性的操作来执行。这可以用于确保跨 `partition` 的消息有序性。
+4. **应用逻辑控制**：在应用程序中，可以通过控制生产者和消费者的逻辑来保证不同 `partition` 之间的消息顺序。例如，生产者可以在发送消息之前检查其他 `partition` 中的消息顺序，或者消费者在消费消息时按照一定的顺序来处理不同 `partition` 中的消息。
+
+需要注意的是，Kafka 并不提供内置的机制来保证 `topic` 中不同 `partition` 之间的消息顺序，这需要通过应用程序的逻辑来实现。如果你需要在不同 `partition` 之间保证消息的顺序性，那么你需要在生产者和消费者端都采取相应的措施。
+
+
+
+#### Replica
+
+Kafka 为分区引入了多副本（Replica）机制，通过增加副本数量可以提升容灾能力。同一分区的不同副本中保存的是相同的消息（在同一时刻，副本之间并非完全一样），副本之间是“一主多从”的关系，其中leader副本负责处理读写请求，follower副本只负责与leader副本的消息同步。副本处于不同的broker中，当leader副本出现故障时，从follower副本中重新选举新的leader副本对外提供服务。Kafka通过多副本机制实现了故障的自动转移，当Kafka集群中某个broker失效时仍然能保证服务可用。
+
+如图1-3所示，Kafka集群中有4个broker，某个主题中有3个分区，且副本因子（即副本个数）也为3，如此每个分区便有1个leader副本和2个follower副本。生产者和消费者只与leader副本进行交互，而follower副本只负责消息的同步，很多时候follower副本中的消息相对leader副本而言会有一定的滞后。
+
+![image-20240423111824095](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20240423111824095.png)
+
+
+
+- 分区中的所有副本统称为AR（Assigned Replicas）。
+- 所有与leader副本保持一定程度同步的副本（包括leader副本在内）组成ISR（In-Sync Replicas），ISR集合是AR集合中的一个子集。
+- 消息会先发送到leader副本，然后follower副本才能从leader副本中拉取消息进行同步，同步期间内follower副本相对于leader副本而言会有一定程度的滞后。前面所说的“一定程度的同步”是指可忍受的滞后范围，这个范围可以通过参数进行配置。
+- 与leader副本同步滞后过多的副本（不包括leader副本）组成OSR（Out-of-Sync Replicas），由此可见，AR=ISR+OSR。
+- 在正常情况下，所有的follower 副本都应该与 leader 副本保持一定程度的同步，即 AR=ISR，OSR集合为空。
+
+
+
+#### Leader Follower
+
+leader副本负责维护和跟踪ISR集合中所有follower副本的滞后状态，当follower副本落后太多或失效时，leader副本会把它从ISR集合中剔除。如果OSR集合中有follower副本“追上”了leader副本，那么leader副本会把它从OSR集合转移至ISR集合。默认情况下，当leader副本发生故障时，只有在ISR集合中的副本才有资格被选举为新的leader，而在OSR集合中的副本则没有任何机会（不过这个原则也可以通过修改相应的参数配置来改变）。
+
+
+
+#### High Watermark
+
+HW是High Watermark的缩写，俗称高水位，它标识了一个特定的消息偏移量（offset），消费者只能拉取到这个offset之前的消息。
+
+
+
+#### LEO/LSO
+
+![image-20240423141721547](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20240423141721547.png)
+
+
+
+如图 1-4 所示，它代表一个日志文件，这个日志文件中有 9 条消息，第一条消息的 offset（LogStartOffset）为0，最后一条消息的offset为8，offset为9的消息用虚线框表示，代表下一条待写入的消息。日志文件的HW为6，表示消费者只能拉取到offset在0至5之间的消息，而offset为6的消息对消费者而言是不可见的。
+
+LEO是Log End Offset的缩写，它标识当前日志文件中下一条待写入消息的offset，图1-4中offset为9的位置即为当前日志文件的LEO，LEO的大小相当于当前日志分区中最后一条消息的offset值加1。分区ISR集合中的每个副本都会维护自身的LEO，而ISR集合中最小的LEO即为分区的HW，对消费者而言只能消费HW之前的消息。
+
+> 注意要点：很多资料中误将图1-4中的offset为5的位置看作HW，而把offset为8的位置看作LEO，这显然是不对的。
+
+
+
+![image-20240423143954438](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20240423143954438.png)
+
+在消息写入leader副本之后，follower副本会发送拉取请求来拉取消息3和消息4以进行消息同步。在同步过程中，不同的 follower 副本的同步效率也不尽相同。如图 1-7 所示，在某一时刻follower1完全跟上了leader副本而follower2只同步了消息3，如此leader副本的LEO为5，follower1的LEO为5，follower2的LEO为4，那么当前分区的HW取最小值4，此时消费者可以消费到offset为0至3之间的消息。
+
+![image-20240423144028146](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20240423144028146.png)
+
+
+
+![image-20240423144101756](C:\Users\Gatsby\AppData\Roaming\Typora\typora-user-images\image-20240423144101756.png)
+
+
+
+> 由此可见，Kafka 的复制机制既不是完全的同步复制，也不是单纯的异步复制。事实上，同步复制要求所有能工作的 follower 副本都复制完，这条消息才会被确认为已成功提交，这种复制方式极大地影响了性能。而在异步复制方式下，follower副本异步地从leader副本中复制数据，数据只要被leader副本写入就被认为已经成功提交。在这种情况下，如果follower副本都还没有复制完而落后于leader副本，突然leader副本宕机，则会造成数据丢失。Kafka使用的这种ISR的方式则有效地权衡了数据可靠性和性能之间的关系。
+
+
+
+#### Broker
+
+一个 Kafka 服务器也称为 Broker，它接受生产者发送的消息并存入磁盘；Broker  同时服务消费者拉取分区消息的请求，返回目前已经提交的消息。使用特定的机器硬件，一个 Broker  每秒可以处理成千上万的分区和百万量级的消息。
+
+#### Cluster
 
 若干个 Broker 组成一个集群（Cluster），其中集群内某个 Broker 会成为集群控制器（Cluster  Controller），它负责管理集群，包括分配分区到 Broker、监控 Broker 故障等。在集群内，一个分区由一个 Broker  负责，这个 Broker 也称为这个分区的 Leader；当然一个分区可以被复制到多个 Broker 上来实现冗余，这样当存在 Broker  故障时可以将其分区重新分配到其他 Broker 来负责。下图是一个样例：![img](https://pic2.zhimg.com/v2-9c8de1bed82a54799c4ef2cbfeedab61_r.jpg)
 
@@ -229,7 +334,7 @@ Kafka 是一种分布式的，基于发布 / 订阅的消息系统。主要设�
 
 
 
-#### 概念四：多集群
+#### 多集群
 
 随着业务的发展，我们往往需要多集群，通常处于下面几个原因：
 
@@ -240,6 +345,12 @@ Kafka 是一种分布式的，基于发布 / 订阅的消息系统。主要设�
 当构建多个数据中心时，往往需要实现消息互通。举个例子，假如用户修改了个人资料，那么后续的请求无论被哪个数据中心处理，这个更新需要反映出来。又或者，多个数据中心的数据需要汇总到一个总控中心来做数据分析。
 
 上面说的分区复制冗余机制只适用于同一个 Kafka 集群内部，对于多个 Kafka 集群消息同步可以使用 Kafka 提供的 MirrorMaker  工具。本质上来说，MirrorMaker 只是一个 Kafka  消费者和生产者，并使用一个队列连接起来而已。它从一个集群中消费消息，然后往另一个集群生产消息。
+
+
+
+
+
+### Kafka 版本演进
 
 
 
