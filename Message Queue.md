@@ -189,7 +189,7 @@ Kafka本身没有自带延迟队列，自定义实现延迟队列很麻烦。
 
 **Kafka** 是一个消息系统，原本开发自 LinkedIn，用作 LinkedIn 的活动流（Activity Stream）和运营数据处理管道（Pipeline）的基础。现在它已被作为多种类型的数据管道和消息系统使用。
 
-### **Kafka 简介**
+### **Kafka Intro**
 
 Kafka 是一种分布式的，基于发布 / 订阅的消息系统。主要设计目标如下：
 
@@ -201,7 +201,7 @@ Kafka 是一种分布式的，基于发布 / 订阅的消息系统。主要设�
 
 
 
-### Kafka 基础概念
+### Kafka Concepts
 
 #### Producer
 
@@ -350,7 +350,57 @@ LEO是Log End Offset的缩写，它标识当前日志文件中下一条待写入
 
 
 
-### Kafka 版本演进
+
+
+### kafka Install & Config
+
+#### Kafka 版本演进
+
+
+
+
+
+#### Zookeeper
+
+windows环境下启动zookeeper
+
+1. 安装ZooKeeper的第一步也是下载相应的安装包，安装包可以从官网中获得，示例中使用的安装包是zookeeper-3.4.12.tar.gz，同样将其复制到安装目录下，然后解压缩
+2. 修改配置文件。将zoo_sample.cfg文件修改为zoo.cfg，并且配置其中的dataDir和dataLogDir。clientPort根据情况自己设定。
+3. 在dataDir目录下创建一个myid文件，并写入一个数字，比如0。这就是服务器的编号。
+4. Windows启动服务只需要双击zkServer.cmd。
+
+
+
+#### Kafka start
+
+1. 从官网下载安装包，解压缩。
+
+2. 修改/conf/server.properties，修改listeners=PLAINTEXT://localhost:9092，log.dirs=D:/data/kafka
+
+3. 如果是单机模式，已经可以启动服务。
+
+   ```shell
+   .\bin\windows\kafka-server-start.bat .\config\server.properties
+   ```
+
+   
+
+#### Topic
+
+```shell
+.\windows\kafka-topics.bat --zookeeper localhost:2181 --create --topic topic-demo --replication-factor 1 --partitions 4
+```
+
+
+
+```shell
+PS D:\kafka_2.13-2.7.2\bin> .\windows\kafka-topics.bat --zookeeper localhost:2181 --describe --topic topic-demo
+Topic: topic-demo       PartitionCount: 4       ReplicationFactor: 1    Configs:
+        Topic: topic-demo       Partition: 0    Leader: 0       Replicas: 0     Isr: 0
+        Topic: topic-demo       Partition: 1    Leader: 0       Replicas: 0     Isr: 0
+        Topic: topic-demo       Partition: 2    Leader: 0       Replicas: 0     Isr: 0
+        Topic: topic-demo       Partition: 3    Leader: 0       Replicas: 0     Isr: 0
+```
 
 
 
@@ -358,7 +408,25 @@ LEO是Log End Offset的缩写，它标识当前日志文件中下一条待写入
 
 
 
+#### Consumer
 
+```shell
+PS D:\kafka_2.13-2.7.2\bin> .\windows\kafka-console-consumer.bat --bootstrap-server localhost:9092 --topic topic-demo
+```
+
+出现文本框，开始等待接收生产者推送的数据。
+
+
+
+#### Producer
+
+```shell
+PS D:\kafka_2.13-2.7.2\bin> .\windows\kafka-console-producer.bat --bootstrap-server localhost:9092 --topic topic-demo
+```
+
+出现文本输入框，输入的内容将会推送到消费者的文本框。
+
+### 
 
 
 
